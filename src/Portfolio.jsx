@@ -130,7 +130,7 @@ export default function Portfolio() {
             <a href="mailto:thejegan31@gmail.com" className="hover:text-blue-300">
               <Mail size={32} />
             </a>
-            <a href="https://github.com/yourgithub" className="hover:text-blue-300">
+            <a href="https://github.com/thejegan" className="hover:text-blue-300">
               <Github size={32} />
             </a>
             <a href="https://linkedin.com/in/thejegan" className="hover:text-blue-300">
