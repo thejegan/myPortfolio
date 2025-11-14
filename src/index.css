@@ -70,3 +70,22 @@ body {
   padding: 1.25rem;
   box-shadow: 0 6px 20px rgba(2,6,23,.5);
 }
+
+/* 1) Prevent any horizontal overflow globally */
+html, body, #root {
+  overflow-x: hidden;         /* stop horizontal scroll */
+  -webkit-overflow-scrolling: auto;
+}
+
+/* 2) Keep vertical scrollbar to avoid layout shift when it appears/disappears */
+body {
+  min-height: 100vh;
+  overflow-y: scroll;         /* keeps layout stable on desktop when content changes */
+}
+
+/* 3) Prevent touch devices from panning horizontally (mobile swipe) */
+body, .aurora-container {
+  touch-action: pan-y;        /* allow vertical scroll only */
+  overscroll-behavior-x: none;
+}
+

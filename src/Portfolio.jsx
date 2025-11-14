@@ -1,3 +1,4 @@
+// src/Portfolio.jsx
 import { motion } from "framer-motion";
 import { Github, Linkedin, Mail } from "lucide-react";
 import Aurora from "./components/Aurora.jsx";
@@ -13,10 +14,10 @@ export default function Portfolio() {
         speed={0.4}
       />
 
-      {/* Main Content */}
-      <div className="relative z-10 text-white">
+      {/* Main Content Wrapper (fixes horizontal scroll) */}
+      <div className="relative z-10 text-white overflow-x-hidden">
 
-        {/* HERO */}
+        {/* HERO SECTION */}
         <section className="min-h-screen flex flex-col justify-center items-center text-center px-6 md:px-12">
           <motion.h1
             initial={{ opacity: 0, y: 20 }}
@@ -94,7 +95,8 @@ export default function Portfolio() {
                 initial={{ opacity: 0, y: 30 }}
                 whileInView={{ opacity: 1, y: 0 }}
                 transition={{ duration: 0.6 }}
-                className="p-6 rounded-2xl bg-white/10 backdrop-blur-md shadow-xl hover:scale-[1.02] transition-transform"
+                className="p-6 rounded-2xl bg-white/10 backdrop-blur-md shadow-xl
+                hover:scale-[1.015] will-change-transform transition-transform"
               >
                 <h3 className="text-xl font-semibold mb-2">{p.name}</h3>
                 <p className="text-gray-200 mb-4">{p.desc}</p>
@@ -130,7 +132,7 @@ export default function Portfolio() {
             <a href="mailto:thejegan31@gmail.com" className="hover:text-blue-300">
               <Mail size={32} />
             </a>
-            <a href="https://github.com/thejegan" className="hover:text-blue-300">
+            <a href="https://github.com/yourgithub" className="hover:text-blue-300">
               <Github size={32} />
             </a>
             <a href="https://linkedin.com/in/thejegan" className="hover:text-blue-300">
