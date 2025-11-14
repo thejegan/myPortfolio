@@ -1,103 +1,149 @@
 import { motion } from "framer-motion";
 import { Github, Linkedin, Mail } from "lucide-react";
+import Aurora from "./components/Aurora.jsx";
 
 export default function Portfolio() {
   return (
-    <div className="bg-gray-900 text-gray-100">
-      {/* Hero Section */}
-      <section className="min-h-screen flex flex-col justify-center items-center text-center px-4 py-16 md:py-32">
-        <motion.h1
-          initial={{ opacity: 0, y: -20 }}
-          animate={{ opacity: 1, y: 0 }}
-          transition={{ duration: 0.6 }}
-          className="text-5xl md:text-6xl font-extrabold mb-6 text-white"
-        >
-          Hi, I'm <span className="text-blue-400">Jegan</span>
-        </motion.h1>
-        <motion.p
-          initial={{ opacity: 0 }}
-          animate={{ opacity: 1 }}
-          transition={{ delay: 0.4 }}
-          className="text-xl md:text-2xl max-w-2xl text-gray-300 mx-auto"
-        >
-          I create beautiful, user-friendly web and mobile apps, powered by AI and interactive design.
-        </motion.p>
-        <div className="mt-8 flex gap-4 justify-center">
-          <a href="#projects" className="bg-blue-400 text-white px-6 py-3 rounded-lg shadow-lg hover:bg-blue-500 transition">
-            View My Work
-          </a>
-          <a href="#contact" className="border border-blue-400 text-blue-400 px-6 py-3 rounded-lg hover:bg-blue-500 hover:text-white transition">
-            Contact Me
-          </a>
-        </div>
-      </section>
+    <>
+      {/* Aurora Background */}
+      <Aurora
+        colorStops={["#3A29FF", "#FF94B4", "#FF3232"]}
+        blend={0.7}
+        amplitude={1.2}
+        speed={0.4}
+      />
 
-      {/* About Section */}
-      <section id="about" className="py-20 bg-gray-800 text-center px-6 md:px-20">
-        <h2 className="text-3xl md:text-4xl font-semibold text-white mb-6">About Me</h2>
-        <p className="text-lg md:text-xl max-w-2xl mx-auto text-gray-400">
-          I’m a developer focused on building apps that solve problems in smart, creative ways.  
-          I’ve worked on AI models, interactive 3D web apps, and more. Let’s build something amazing together!
-        </p>
-      </section>
+      {/* Main Content */}
+      <div className="relative z-10 text-white">
 
-      {/* Projects Section */}
-      <section id="projects" className="py-20 bg-gray-900 text-center px-6 md:px-20">
-        <h2 className="text-3xl md:text-4xl font-semibold text-blue-400 mb-8">Projects</h2>
-        <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-8">
-          {[
-            {
-              name: "Plaro",
-              desc: "An educational social platform using Flutter,Dart and Supabase to connect learners and educators.",
-              link: "#",
-              tech: ["Flutter", "Supabase", "Dart"],
-            },
-            {
-              name: "Astrogators (3D Solar System)",
-              desc: "An interactive 3D simulation of the solar system using Three.js and WebGL.",
-              link: "#",
-              tech: ["Three.js", "WebGL"],
-            },
-          ].map((project, i) => (
-            <motion.div
-              key={i}
-              initial={{ opacity: 0, y: 30 }}
-              whileInView={{ opacity: 1, y: 0 }}
-              transition={{ duration: 0.5, delay: i * 0.1 }}
-              className="bg-gray-700 shadow-lg rounded-lg p-6 hover:-translate-y-2 transition transform"
+        {/* HERO */}
+        <section className="min-h-screen flex flex-col justify-center items-center text-center px-6 md:px-12">
+          <motion.h1
+            initial={{ opacity: 0, y: 20 }}
+            animate={{ opacity: 1, y: 0 }}
+            transition={{ duration: 0.7 }}
+            className="text-5xl md:text-7xl font-semibold tracking-tight mb-6"
+          >
+            Hi, I'm Jegan
+          </motion.h1>
+
+          <motion.p
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.3 }}
+            className="text-lg md:text-2xl max-w-2xl text-gray-200 leading-relaxed"
+          >
+            I build thoughtful, user-focused web & mobile experiences — blending clean design,
+            intelligent systems, and smooth interactions.
+          </motion.p>
+
+          <motion.div
+            initial={{ opacity: 0 }}
+            animate={{ opacity: 1 }}
+            transition={{ delay: 0.6 }}
+            className="mt-10 flex gap-4 justify-center"
+          >
+            <a
+              href="#projects"
+              className="px-6 py-3 bg-white text-black rounded-xl font-medium shadow-lg hover:shadow-xl transition-all"
             >
-              <h3 className="text-xl font-bold text-white">{project.name}</h3>
-              <p className="text-gray-300 mt-2">{project.desc}</p>
-              <div className="mt-4 text-blue-400">
-                <a href={project.link} className="hover:underline">View Project</a>
-              </div>
-              <div className="mt-4 flex flex-wrap gap-2 justify-center">
-                {project.tech.map((tech) => (
-                  <span key={tech} className="bg-gray-800 text-gray-400 px-3 py-1 rounded-full text-sm">
-                    {tech}
-                  </span>
-                ))}
-              </div>
-            </motion.div>
-          ))}
-        </div>
-      </section>
+              View My Work
+            </a>
 
-      {/* Contact Section */}
-      <section id="contact" className="py-20 bg-gray-800 text-center px-6 md:px-20">
-        <h2 className="text-3xl font-semibold text-white mb-6">Get In Touch</h2>
-        <p className="text-gray-300 mb-8">I’m available for freelance work, collaborations, or full-time opportunities. Let’s create something awesome together!</p>
-        <div className="flex justify-center gap-8 text-blue-400">
-          <a href="mailto:thejegan31@gmail.com" className="hover:text-blue-500"><Mail size={28} /></a>
-          <a href="https://github.com/yourgithub" target="_blank" rel="noreferrer" className="hover:text-blue-500"><Github size={28} /></a>
-          <a href="https://linkedin.com/in/thejegan" target="_blank" rel="noreferrer" className="hover:text-blue-500"><Linkedin size={28} /></a>
-        </div>
-      </section>
+            <a
+              href="#contact"
+              className="px-6 py-3 border border-white/40 text-white rounded-xl hover:bg-white/10 transition-all"
+            >
+              Contact
+            </a>
+          </motion.div>
+        </section>
 
-      {/* Footer */}
-      <footer className="py-6 bg-gray-900 text-gray-300 text-center">
-        © {new Date().getFullYear()} Jegan. Built with ❤️ using React + Tailwind.
-      </footer>
-    </div>
+        {/* ABOUT */}
+        <section id="about" className="py-24 px-6 md:px-20 text-center">
+          <h2 className="text-4xl font-semibold mb-6">About Me</h2>
+
+          <p className="max-w-2xl mx-auto text-gray-200 text-lg md:text-xl leading-relaxed">
+            I’m a developer who cares deeply about design, performance, and clarity.
+            I enjoy transforming complex ideas into seamless interactive experiences —
+            from AI-powered tools to immersive 3D visualizations.
+          </p>
+        </section>
+
+        {/* PROJECTS */}
+        <section id="projects" className="py-24 px-6 md:px-20 text-center">
+          <h2 className="text-4xl font-semibold mb-12">Projects</h2>
+
+          <div className="grid md:grid-cols-2 lg:grid-cols-3 gap-10">
+            {[
+              {
+                name: "Plaro",
+                desc: "Educational social platform built using Flutter, Dart & Supabase.",
+                link: "https://github.com/plaroindia/Project-Plaro",
+                tech: ["Flutter", "Supabase", "Dart"],
+              },
+              {
+                name: "Astrogators (3D Solar System)",
+                desc: "Interactive 3D solar system simulation using Three.js.",
+                link: "#",
+                tech: ["Three.js", "WebGL"],
+              },
+            ].map((p, i) => (
+              <motion.div
+                key={i}
+                initial={{ opacity: 0, y: 30 }}
+                whileInView={{ opacity: 1, y: 0 }}
+                transition={{ duration: 0.6 }}
+                className="p-6 rounded-2xl bg-white/10 backdrop-blur-md shadow-xl hover:scale-[1.02] transition-transform"
+              >
+                <h3 className="text-xl font-semibold mb-2">{p.name}</h3>
+                <p className="text-gray-200 mb-4">{p.desc}</p>
+
+                <a href={p.link} className="text-blue-300 font-medium hover:underline">
+                  View Project
+                </a>
+
+                <div className="mt-4 flex flex-wrap justify-center gap-2">
+                  {p.tech.map((t) => (
+                    <span
+                      key={t}
+                      className="px-3 py-1 bg-white/20 rounded-full text-sm"
+                    >
+                      {t}
+                    </span>
+                  ))}
+                </div>
+              </motion.div>
+            ))}
+          </div>
+        </section>
+
+        {/* CONTACT */}
+        <section id="contact" className="py-24 px-6 md:px-20 text-center">
+          <h2 className="text-4xl font-semibold mb-8">Get In Touch</h2>
+
+          <p className="max-w-xl mx-auto text-gray-200 mb-10">
+            Open to collaborations, freelance work, or just meaningful conversations.
+          </p>
+
+          <div className="flex justify-center gap-10 text-white">
+            <a href="mailto:thejegan31@gmail.com" className="hover:text-blue-300">
+              <Mail size={32} />
+            </a>
+            <a href="https://github.com/yourgithub" className="hover:text-blue-300">
+              <Github size={32} />
+            </a>
+            <a href="https://linkedin.com/in/thejegan" className="hover:text-blue-300">
+              <Linkedin size={32} />
+            </a>
+          </div>
+        </section>
+
+        {/* FOOTER */}
+        <footer className="py-10 text-center text-gray-300">
+          © {new Date().getFullYear()} Jegan — Built with care & clarity.
+        </footer>
+      </div>
+    </>
   );
 }

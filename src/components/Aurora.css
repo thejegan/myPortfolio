@@ -1,0 +1,16 @@
+/* src/components/Aurora.css */
+.aurora-container {
+  position: fixed;
+  inset: 0;                 /* top:0; right:0; bottom:0; left:0; */
+  z-index: 0;               /* behind content */
+  pointer-events: none;     /* allow clicks through */
+  overflow: hidden;
+  will-change: transform;
+}
+
+/* ensure the canvas fills the container (ogl appends canvas) */
+.aurora-container canvas {
+  width: 100% !important;
+  height: 100% !important;
+  display: block;
+}
