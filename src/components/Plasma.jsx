@@ -122,24 +122,43 @@ export const Plasma = ({
     let mounted = true;
 
     try {
-      // adaptive initial DPR
+            // adaptive initial DPR
+      // ---------- adaptive device detection (small, safe change) ----------
+      // Treat touch-capable devices as "mobile" even if the viewport width is large.
+      // This prevents "Request Desktop Site" on phones from forcing desktop-quality
+      // DPR/FPS/power modes which cause large battery/CPU usage.
       const rawDpr = Math.max(1, Math.min(window.devicePixelRatio || 1, 2));
-      const isMobile = window.innerWidth < 768;
+
+      // detect touch device (phones/tablets): either 'ontouchstart' or maxTouchPoints
+      const isTouchDevice = typeof window !== 'undefined' &&
+                            ('ontouchstart' in window || (navigator && navigator.maxTouchPoints > 0));
+
+      // keep small-screen check too (desktop browsers on tablets may still be touchCapable)
+      const isSmallScreen = window.innerWidth < 768;
+
+      // final decision: treat as mobile if touch-capable OR small screen
+      const isMobile = isTouchDevice || isSmallScreen;
+
+      // cap DPR more aggressively on true mobile devices
       const initialDpr = isMobile ? Math.min(rawDpr, 1) : Math.min(rawDpr, 1.5);
 
-      // adaptive initial FPS
+      // prefer lower FPS on mobile/touch to save CPU/battery
       const initialFPS = isMobile ? 18 : 24;
       frameIntervalRef.current = 1000 / initialFPS;
+
+      // prefer lower GPU profile on mobile/touch devices to avoid overheating / heavy battery drain
+      const powerPref = isMobile ? 'low-power' : 'high-performance';
 
       const renderer = new Renderer({
         alpha: true,
         antialias: false,
         premultipliedAlpha: true,
-        powerPreference: 'high-performance',
+        powerPreference: powerPref,
         depth: false,
         stencil: false,
         dpr: initialDpr,
       });
+
       rendererRef.current = renderer;
       const gl = renderer.gl;
       const canvas = gl.canvas;
