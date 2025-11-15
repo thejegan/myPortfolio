@@ -86,10 +86,10 @@ void main() {
 }`;
 
 export const Plasma = ({
-  color = '#ffffff',
-  speed = 1,
+  color = '#9400d3',
+  speed = 0.8,
   direction = 'forward',
-  scale = 1,
+  scale = 0.3,
   opacity = 1,
   mouseInteractive = true,
 }) => {
