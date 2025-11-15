@@ -15,12 +15,35 @@ export default function Portfolio() {
     setMounted(true);
   }, []);
 
-  // Decide whether to load/show Plasma. Keep conservative defaults on server.
-  // Treat as "show on desktop" OR when a touch device should get desktop visuals (rare).
+  // Decide whether to load/show Plasma. Capability-based check:
+  // - respects prefers-reduced-motion
+  // - always shows on wider screens
+  // - on small screens requires modest device capability (deviceMemory & cores)
   const showPlasma = useMemo(() => {
     if (typeof window === 'undefined') return false;
-    // show on wide viewports (desktop) OR on non-multi-touch devices (some tablets behave differently)
-    return window.innerWidth >= 768 || ('ontouchstart' in window && navigator.maxTouchPoints <= 1);
+
+    // Quick debug override: uncomment to force Plasma everywhere for testing
+    // return true;
+
+    // Respect accessibility preference
+    if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) {
+      return false;
+    }
+
+    const isSmallScreen = window.innerWidth < 768;
+
+    // Always show on wider screens (desktop / large tablets)
+    if (!isSmallScreen) return true;
+
+    // On small screens, check device capability hints (best-effort)
+    const deviceMemory = navigator.deviceMemory || 4; // GB, fallback to 4GB if unavailable
+    const cores = navigator.hardwareConcurrency || 4; // logical cores, fallback to 4
+
+    // Require modest capability on mobile: at least 2GB RAM and >=2 cores
+    if (deviceMemory >= 2 && cores >= 2) return true;
+
+    // Otherwise skip Plasma on low-end mobile
+    return false;
   }, []);
 
   // stable plasma props so parent re-renders don't create new objects
