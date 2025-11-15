@@ -19,7 +19,7 @@ export default function Portfolio() {
         color="#6f00ff"
         speed={0.5}
         direction="forward"
-        scale={1.5}
+        scale={0.5}
         opacity={0.5}
         mouseInteractive={true}
       />

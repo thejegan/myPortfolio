@@ -2,89 +2,57 @@
 @tailwind components;
 @tailwind utilities;
 
-/* index.css — add at top of file */
-
-:root{
-  --bg: #0f1724;        /* very dark slate */
-  --panel: #0b1220;     /* slightly lighter surface */
-  --muted: #94a3b8;     /* cool gray for secondary text */
-  --accent: #5b8def;    /* indigo-ish accent */
+:root {
+  --bg: #0f1724;
+  --panel: #0b1220;
+  --muted: #94a3b8;
+  --accent: #5b8def;
   --accent-600: #3a6fe8;
   --card: #0b1320;
 }
 
 html, body, #root {
   height: 100%;
+  overflow-x: hidden;
 }
 
 body {
   margin: 0;
-  font-family: 'Inter', system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
+  font-family: 'Inter', system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
   background: var(--bg);
-  color: #e6eef8; /* light text */
+  color: #e6eef8;
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
   line-height: 1.5;
   -webkit-tap-highlight-color: transparent;
-}
-
-/* Small utility tweaks (optional if you're using Tailwind) */
-.container-max {
-  max-width: 1200px;
-  margin-left: auto;
-  margin-right: auto;
-  padding-left: 1rem;
-  padding-right: 1rem;
-}
-
-/* Buttons fallback if not using Tailwind button classes */
-.btn {
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
-  gap: .5rem;
-  padding: .6rem 1.1rem;
-  border-radius: 10px;
-  font-weight: 600;
-  cursor: pointer;
-  transition: transform .15s ease, box-shadow .15s ease;
-}
-
-.btn-accent {
-  background: linear-gradient(180deg, var(--accent), var(--accent-600));
-  color: white;
-  box-shadow: 0 6px 18px rgba(59,111,232,.12);
-  border: none;
-}
-
-.btn-ghost {
-  background: transparent;
-  border: 1px solid rgba(255,255,255,.06);
-  color: var(--accent);
-}
-
-.card {
-  background: linear-gradient(180deg, rgba(255,255,255,0.02), rgba(255,255,255,0.01));
-  border-radius: 12px;
-  padding: 1.25rem;
-  box-shadow: 0 6px 20px rgba(2,6,23,.5);
-}
-
-/* 1) Prevent any horizontal overflow globally */
-html, body, #root {
-  overflow-x: hidden;         /* stop horizontal scroll */
-  -webkit-overflow-scrolling: auto;
-}
-
-/* 2) Keep vertical scrollbar to avoid layout shift when it appears/disappears */
-body {
   min-height: 100vh;
-  overflow-y: scroll;         /* keeps layout stable on desktop when content changes */
+  overflow-y: scroll;
 }
 
-/* 3) Prevent touch devices from panning horizontally (mobile swipe) */
-body, .aurora-container {
-  touch-action: pan-y;        /* allow vertical scroll only */
+body, .plasma-container {
+  touch-action: pan-y;
   overscroll-behavior-x: none;
 }
 
+/* Smooth scrolling */
+html {
+  scroll-behavior: smooth;
+}
+
+/* Custom scrollbar */
+::-webkit-scrollbar {
+  width: 8px;
+}
+
+::-webkit-scrollbar-track {
+  background: var(--panel);
+}
+
+::-webkit-scrollbar-thumb {
+  background: var(--accent);
+  border-radius: 4px;
+}
+
+::-webkit-scrollbar-thumb:hover {
+  background: var(--accent-600);
+}
