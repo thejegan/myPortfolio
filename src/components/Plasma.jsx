@@ -1,7 +1,6 @@
 // src/components/Plasma.jsx
 import { useEffect, useRef } from 'react';
 import { Renderer, Program, Mesh, Triangle } from 'ogl';
-import './Plasma.css';
 
 // helper: convert hex to normalized rgb array
 const hexToRgb = (hex) => {
@@ -38,7 +37,7 @@ function throttle(fn, wait = 100) {
   };
 }
 
-// shader strings (preserved exactly)
+// shader strings
 const vertex = `#version 300 es
 precision highp float;
 in vec2 position;
@@ -74,7 +73,6 @@ void mainImage(out vec4 o, vec2 C) {
   float i, d, z, T = iTime * uSpeed * uDirection;
   vec3 O, p, S;
 
-  // Reduced iterations from 60 to 40 for better performance
   for (vec2 r = iResolution.xy, Q; ++i < 25.; O += o.w/d*o.xyz) {
     p = z*normalize(vec3(C-.5*r,r.y)); 
     p.z -= 4.; 
@@ -108,12 +106,13 @@ void main() {
   vec3 customColor = intensity * uCustomColor;
   vec3 finalColor = mix(rgb, customColor, step(0.5, uUseCustomColor));
   
-  float alpha = length(rgb) * uOpacity;
-  fragColor = vec4(finalColor, alpha);
+  // Remove white overlay completely - only show bright colored areas
+  float luminance = dot(finalColor, vec3(0.299, 0.587, 0.114));
+  float alpha = pow(luminance, 4.0) * uOpacity * 0.25;
+  fragColor = vec4(finalColor * 2.0, alpha);
 }`;
 
-// Keep the named export for compatibility
-export const Plasma = ({
+const Plasma = ({
   color = '#6f00ff',
   speed = 0.5,
   direction = 'forward',
@@ -122,8 +121,6 @@ export const Plasma = ({
   mouseInteractive = false,
 }) => {
   const containerRef = useRef(null);
-
-  // persistent refs
   const rendererRef = useRef(null);
   const programRef = useRef(null);
   const meshRef = useRef(null);
@@ -132,12 +129,10 @@ export const Plasma = ({
   const heroObserverRef = useRef(null);
   const runningRef = useRef(true);
   const lastFrameRef = useRef(performance.now());
-
-  // performance sampling for adaptive DPR/FPS
   const perfSamplesRef = useRef([]);
   const perfSampleFrames = 30;
   const areaRef = useRef(0);
-  const frameIntervalRef = useRef(1000 / 24); // default 24 fps
+  const frameIntervalRef = useRef(1000 / 24);
 
   useEffect(() => {
     const containerEl = containerRef.current;
@@ -145,7 +140,6 @@ export const Plasma = ({
     let mounted = true;
 
     try {
-      // ---------- adaptive initial DPR ----------
       const rawDpr = Math.max(1, Math.min(window.devicePixelRatio || 1, 2));
       const isTouchDevice =
         typeof window !== 'undefined' &&
@@ -175,7 +169,6 @@ export const Plasma = ({
       canvas.style.height = '100%';
       containerEl.appendChild(canvas);
 
-      // Program & mesh (shader uniforms)
       const geometry = new Triangle(gl);
       const customColorRgb = color ? hexToRgb(color) : [1, 1, 1];
       const directionMultiplier = direction === 'reverse' ? -1.0 : 1.0;
@@ -200,9 +193,8 @@ export const Plasma = ({
       programRef.current = program;
       meshRef.current = new Mesh(gl, { geometry, program });
 
-      // ---------- setSize with area threshold + backbuffer cap ----------
       let sizePending = false;
-      const MAX_PIXELS = 1920 * 1080; // cap for backbuffer roughly 2MP; adjust if you prefer
+      const MAX_PIXELS = 1920 * 1080;
 
       const setSize = () => {
         if (!mounted || !containerEl || !rendererRef.current) return;
@@ -215,25 +207,21 @@ export const Plasma = ({
           const cssH = Math.max(1, Math.floor(rect.height));
           const cssArea = cssW * cssH;
 
-          // small change guard (<2%)
           const newArea = cssArea;
           if (areaRef.current > 0) {
             const delta = Math.abs(newArea - areaRef.current) / areaRef.current;
-            if (delta < 0.02) return; // ignore tiny changes
+            if (delta < 0.02) return;
           }
           areaRef.current = newArea;
 
-          // compute effective DPR to cap pixel count
           const rendererLocal = rendererRef.current;
           let effectiveDpr = rendererLocal.dpr || initialDpr || 1;
-          // ensure effective backbuffer pixels <= MAX_PIXELS
           const desiredPixels = Math.round(cssW * cssH * (effectiveDpr * effectiveDpr));
           if (desiredPixels > MAX_PIXELS) {
             const scale = Math.sqrt(MAX_PIXELS / desiredPixels);
             effectiveDpr = Math.max(0.75, Math.round(effectiveDpr * scale * 100) / 100);
           }
 
-          // try to set DPR safely
           try {
             if (typeof rendererLocal.setDpr === 'function') {
               rendererLocal.setDpr(effectiveDpr);
@@ -243,16 +231,12 @@ export const Plasma = ({
           } catch (e) {
             try {
               rendererLocal.dpr = effectiveDpr;
-            } catch (e2) {
-              // last resort: ignore
-            }
+            } catch (e2) {}
           }
 
-          // apply size (library will set gl.drawingBufferWidth/Height accordingly)
           try {
             rendererLocal.setSize(cssW, cssH);
           } catch (e) {
-            // fallback: directly update canvas width/height as a best-effort
             try {
               const gl2 = rendererLocal.gl;
               gl2.canvas.width = Math.round(cssW * effectiveDpr);
@@ -275,11 +259,9 @@ export const Plasma = ({
       roRef.current = ro;
       setSize();
 
-      // throttled fallback for window resize (passive)
       const throttledSetSize = throttle(setSize, 200);
       window.addEventListener('resize', throttledSetSize, { passive: true });
 
-      // ---------- mouse handling (throttled) ----------
       const rawHandleMouseMove = (e) => {
         if (!mouseInteractive || !programRef.current) return;
         const clientX = e.touches && e.touches[0] ? e.touches[0].clientX : e.clientX;
@@ -301,7 +283,6 @@ export const Plasma = ({
         containerEl.addEventListener('touchmove', throttledHandleMouseMove, { passive: true });
       }
 
-      // ---------- visibility handling (pause when tab hidden) ----------
       const onVisibility = () => {
         if (document.hidden) {
           runningRef.current = false;
@@ -319,7 +300,6 @@ export const Plasma = ({
       };
       document.addEventListener('visibilitychange', onVisibility);
 
-      // ---------- observe #hero and pause when it is not visible ----------
       let heroObserver = null;
       try {
         const heroEl = document.querySelector('#hero');
@@ -328,14 +308,12 @@ export const Plasma = ({
             (entries) => {
               entries.forEach((entry) => {
                 if (!entry.isIntersecting) {
-                  // pause
                   runningRef.current = false;
                   if (rafRef.current) {
                     cancelAnimationFrame(rafRef.current);
                     rafRef.current = null;
                   }
                 } else {
-                  // resume (only if tab visible)
                   if (!runningRef.current && !document.hidden) {
                     runningRef.current = true;
                     lastFrameRef.current = performance.now();
@@ -349,11 +327,8 @@ export const Plasma = ({
           heroObserver.observe(heroEl);
           heroObserverRef.current = heroObserver;
         }
-      } catch (err) {
-        // ignore
-      }
+      } catch (err) {}
 
-      // ---------- adaptive performance helpers ----------
       const recordFrameMs = (ms) => {
         perfSamplesRef.current.push(ms);
         if (perfSamplesRef.current.length >= perfSampleFrames) {
@@ -361,7 +336,6 @@ export const Plasma = ({
           const avg = arr.reduce((a, b) => a + b, 0) / arr.length;
           perfSamplesRef.current = [];
 
-          // if avg frame time is > threshold, reduce DPR or FPS
           if (avg > 28) {
             const rendererLocal = rendererRef.current;
             if (rendererLocal) {
@@ -379,7 +353,6 @@ export const Plasma = ({
                     rendererLocal.dpr = newDpr;
                   } catch {}
                 }
-                // reapply size to update buffers
                 requestAnimationFrame(() => {
                   const rect = containerEl.getBoundingClientRect();
                   try {
@@ -402,7 +375,6 @@ export const Plasma = ({
         }
       };
 
-      // ---------- render loop (with frame limiter) ----------
       const t0 = performance.now();
       let lastFrameTime = lastFrameRef.current;
 
@@ -426,23 +398,16 @@ export const Plasma = ({
           if (rendererRef.current && meshRef.current) {
             rendererRef.current.render({ scene: meshRef.current });
           }
-        } catch (err) {
-          // swallow render errors (mobile GPUs sometimes throw)
-          if (process.env.NODE_ENV !== 'production') {
-            console.warn('Plasma render error:', err);
-          }
-        }
+        } catch (err) {}
 
         const frameMs = performance.now() - start;
         recordFrameMs(frameMs);
       };
 
-      // start loop
       runningRef.current = !document.hidden;
       lastFrameRef.current = performance.now();
       rafRef.current = requestAnimationFrame(loop);
 
-      // cleanup
       return () => {
         mounted = false;
         if (rafRef.current) {
@@ -475,14 +440,10 @@ export const Plasma = ({
         perfSamplesRef.current = [];
       };
     } catch (error) {
-      // keep init error visible during development
       console.error('Failed to initialize Plasma:', error);
     }
-    // run-once effect: this component intentionally initializes only on mount,
-    // uses refs for stateful values and cleans up on unmount.
-  }, []); // run once on mount
+  }, []);
 
-  // ---------- cheap uniform updates ----------
   useEffect(() => {
     const program = programRef.current;
     if (!program || !program.uniforms) return;
@@ -504,7 +465,23 @@ export const Plasma = ({
     if (program.uniforms.uMouseInteractive) program.uniforms.uMouseInteractive.value = mouseInteractive ? 1.0 : 0.0;
   }, [color, speed, direction, scale, opacity, mouseInteractive]);
 
-  return <div ref={containerRef} className="plasma-container" aria-hidden="true" />;
+  return (
+    <div 
+      ref={containerRef} 
+      style={{
+        position: 'fixed',
+        inset: 0,
+        width: '100%',
+        height: '100%',
+        pointerEvents: 'none',
+        zIndex: 0,
+        willChange: 'transform, opacity',
+        contain: 'paint',
+        touchAction: 'pan-y'
+      }}
+      aria-hidden="true" 
+    />
+  );
 };
 
 export default Plasma;
