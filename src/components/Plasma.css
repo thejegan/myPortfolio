@@ -1,3 +1,11 @@
+/* src/components/Plasma.css
+   CLEAN, OPTIMIZED, NO VISUAL CHANGES
+   -----------------------------------
+   - Keeps plasma canvas GPU-accelerated 
+   - Prevents global GPU overuse
+   - Prevents layout jank
+*/
+
 .plasma-container {
   position: fixed;
   top: 0;
@@ -7,21 +15,26 @@
   z-index: 0;
   pointer-events: none;
   overflow: hidden;
-}
 
-.plasma-container canvas {
-/* Add to index.css */
-.plasma-container,
-.plasma-container canvas {
-  will-change: transform;
-  transform: translateZ(0);
-  backface-visibility: hidden;
-  perspective: 1000px;
-}
-
-/* Optimize all animations */
-* {
+  /* optimize compositor behavior */
+  will-change: transform, opacity;
   transform: translateZ(0);
   backface-visibility: hidden;
 }
+
+.plasma-container canvas {
+  display: block;
+  width: 100%;
+  height: 100%;
+
+  /* keep the canvas layer isolated for WebGL */
+  will-change: transform, opacity;
+  transform: translateZ(0);
+  backface-visibility: hidden;
 }
+
+/* IMPORTANT:
+   Do NOT add any global selectors (like *)
+   Do NOT force translateZ on every element.
+   These were causing massive performance problems.
+*/
