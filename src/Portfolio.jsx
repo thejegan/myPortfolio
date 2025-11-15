@@ -52,7 +52,7 @@ export default function Portfolio() {
       color: '#6f00ff',
       speed: 0.3,
       direction: 'forward',
-      scale: 0.8,
+      scale: 0.3,
       opacity: 0.4,
       mouseInteractive: false,
     }),
