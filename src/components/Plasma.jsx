@@ -45,7 +45,7 @@ void mainImage(out vec4 o, vec2 C) {
   vec3 O, p, S;
 
   // Reduced iterations from 60 to 40 for better performance
-  for (vec2 r = iResolution.xy, Q; ++i < 40.; O += o.w/d*o.xyz) {
+  for (vec2 r = iResolution.xy, Q; ++i < 25.; O += o.w/d*o.xyz) {
     p = z*normalize(vec3(C-.5*r,r.y)); 
     p.z -= 4.; 
     S = p;
@@ -104,14 +104,16 @@ export const Plasma = ({
 
     const isMobile = window.innerWidth < 768;
     // Reduced DPR to 1.5 max for better performance
-    const dpr = isMobile ? 1 : Math.min(window.devicePixelRatio || 1, 1.5);
+    const dpr = isMobile ? 0.75 : 1.0;
 
     try {
       const renderer = new Renderer({
         alpha: true,
         antialias: false,
         premultipliedAlpha: true,
-        powerPreference: 'high-performance', // GPU optimization
+        powerPreference: 'high-performance',
+        depth: false,
+        stencil: false,
         dpr: dpr
       });
       
@@ -181,7 +183,7 @@ export const Plasma = ({
 
       const t0 = performance.now();
       let lastFrameTime = t0;
-      const targetFPS = 30; // Limit to 30 FPS for smoother performance
+      const targetFPS = 24; // Limit to 30 FPS for smoother performance
       const frameInterval = 1000 / targetFPS;
       
       const loop = (t) => {

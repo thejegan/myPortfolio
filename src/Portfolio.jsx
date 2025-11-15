@@ -16,12 +16,13 @@ export default function Portfolio() {
     <div className="relative min-h-screen bg-slate-950 text-white overflow-x-hidden">
       {/* Plasma Background */}
       <Plasma
+
         color="#6f00ff"
-        speed={0.5}
+        speed={0.3}
         direction="forward"
-        scale={0.5}
-        opacity={0.5}
-        mouseInteractive={true}
+        scale={0.8}
+        opacity={0.4}
+        mouseInteractive={false}
       />
 
       {/* Main Content */}
