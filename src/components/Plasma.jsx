@@ -84,7 +84,7 @@ void main() {
   fragColor = vec4(finalColor, alpha);
 }`;
 
-const DEFAULT_TARGET_FPS = 24;
+const DEFAULT_TARGET_FPS = 30;
 
 export const Plasma = ({
   color = '#6f00ff',
