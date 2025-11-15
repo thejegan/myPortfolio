@@ -1,8 +1,11 @@
-import { useState, useEffect } from 'react';
+// Portfolio.jsx
+import React, { useState, useEffect, Suspense, useMemo } from 'react';
 import { Github, Linkedin, Mail } from 'lucide-react';
-import Plasma from './components/Plasma';
 import { useScrollAnimation } from './hooks/useScrollAnimation';
 import { projectsData } from './data/projects.js';
+
+// LAZY import of Plasma to reduce initial bundle on mobile
+const Plasma = React.lazy(() => import('./components/Plasma'));
 
 export default function Portfolio() {
   const visibleSections = useScrollAnimation();
@@ -12,27 +15,42 @@ export default function Portfolio() {
     setMounted(true);
   }, []);
 
+  // Decide whether to load/show Plasma. Keep conservative defaults on server.
+  // Treat as "show on desktop" OR when a touch device should get desktop visuals (rare).
+  const showPlasma = useMemo(() => {
+    if (typeof window === 'undefined') return false;
+    // show on wide viewports (desktop) OR on non-multi-touch devices (some tablets behave differently)
+    return window.innerWidth >= 768 || ('ontouchstart' in window && navigator.maxTouchPoints <= 1);
+  }, []);
+
+  // stable plasma props so parent re-renders don't create new objects
+  const plasmaProps = useMemo(
+    () => ({
+      color: '#6f00ff',
+      speed: 0.3,
+      direction: 'forward',
+      scale: 0.8,
+      opacity: 0.4,
+      mouseInteractive: false,
+    }),
+    []
+  );
+
   return (
     <div className="relative min-h-screen bg-slate-950 text-white overflow-x-hidden">
-      {/* Plasma Background */}
-      <Plasma
-
-        color="#6f00ff"
-        speed={0.3}
-        direction="forward"
-        scale={0.8}
-        opacity={0.4}
-        mouseInteractive={false}
-      />
+      {/* Plasma Background (lazy-loaded) */}
+      <Suspense fallback={null}>
+        {showPlasma ? <Plasma {...plasmaProps} /> : null}
+      </Suspense>
 
       {/* Main Content */}
       <div className="relative z-10">
         {/* HERO SECTION */}
-        <section 
+        <section
           id="hero"
           className="min-h-screen flex flex-col justify-center items-center text-center px-6 md:px-12"
         >
-          <h1 
+          <h1
             className={`text-5xl md:text-7xl font-bold tracking-tight mb-6 transition-all duration-700 ${
               mounted ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-5'
             }`}
@@ -40,7 +58,7 @@ export default function Portfolio() {
             Hi, I'm Jegan
           </h1>
 
-          <p 
+          <p
             className={`text-lg md:text-2xl max-w-2xl text-gray-200 leading-relaxed transition-all duration-700 delay-300 ${
               mounted ? 'opacity-100' : 'opacity-0'
             }`}
@@ -49,7 +67,7 @@ export default function Portfolio() {
             intelligent systems, and smooth interactions.
           </p>
 
-          <div 
+          <div
             className={`mt-10 flex flex-wrap gap-4 justify-center transition-all duration-700 delay-500 ${
               mounted ? 'opacity-100' : 'opacity-0'
             }`}
@@ -71,8 +89,8 @@ export default function Portfolio() {
         </section>
 
         {/* ABOUT */}
-        <section 
-          id="about" 
+        <section
+          id="about"
           className={`py-24 px-6 md:px-20 text-center transition-all duration-700 ${
             visibleSections.about ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
           }`}
@@ -87,8 +105,8 @@ export default function Portfolio() {
         </section>
 
         {/* PROJECTS */}
-        <section 
-          id="projects" 
+        <section
+          id="projects"
           className={`py-24 px-6 md:px-20 text-center transition-all duration-700 ${
             visibleSections.projects ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
           }`}
@@ -107,10 +125,10 @@ export default function Portfolio() {
                 <h3 className="text-xl font-semibold mb-2">{project.name}</h3>
                 <p className="text-gray-200 mb-4">{project.desc}</p>
 
-                <a 
+                <a
                   href={project.link}
                   target="_blank"
-                  rel="noopener noreferrer" 
+                  rel="noopener noreferrer"
                   className="text-blue-300 font-medium hover:underline inline-block"
                 >
                   View Project →
@@ -118,10 +136,7 @@ export default function Portfolio() {
 
                 <div className="mt-4 flex flex-wrap justify-center gap-2">
                   {project.tech.map((tech) => (
-                    <span
-                      key={tech}
-                      className="px-3 py-1 bg-white/20 rounded-full text-sm"
-                    >
+                    <span key={tech} className="px-3 py-1 bg-white/20 rounded-full text-sm">
                       {tech}
                     </span>
                   ))}
@@ -132,8 +147,8 @@ export default function Portfolio() {
         </section>
 
         {/* CONTACT */}
-        <section 
-          id="contact" 
+        <section
+          id="contact"
           className={`py-24 px-6 md:px-20 text-center transition-all duration-700 ${
             visibleSections.contact ? 'opacity-100 translate-y-0' : 'opacity-0 translate-y-10'
           }`}
@@ -145,14 +160,14 @@ export default function Portfolio() {
           </p>
 
           <div className="flex justify-center gap-10 text-white">
-            <a 
-              href="mailto:thejegan31@gmail.com" 
+            <a
+              href="mailto:thejegan31@gmail.com"
               className="hover:text-blue-300 hover:scale-110 transition-all"
               aria-label="Email"
             >
               <Mail size={32} />
             </a>
-            <a 
+            <a
               href="https://github.com/thejegan"
               target="_blank"
               rel="noopener noreferrer"
@@ -161,7 +176,7 @@ export default function Portfolio() {
             >
               <Github size={32} />
             </a>
-            <a 
+            <a
               href="https://linkedin.com/in/thejegan"
               target="_blank"
               rel="noopener noreferrer"

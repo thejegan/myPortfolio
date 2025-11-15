@@ -14,6 +14,30 @@ const hexToRgb = (hex) => {
   ];
 };
 
+// tiny throttle utility
+function throttle(fn, wait = 100) {
+  let last = 0;
+  let timer = null;
+  return (...args) => {
+    const now = Date.now();
+    const remaining = wait - (now - last);
+    if (remaining <= 0) {
+      if (timer) {
+        clearTimeout(timer);
+        timer = null;
+      }
+      last = now;
+      fn(...args);
+    } else if (!timer) {
+      timer = setTimeout(() => {
+        last = Date.now();
+        timer = null;
+        fn(...args);
+      }, remaining);
+    }
+  };
+}
+
 // shader strings (preserved exactly)
 const vertex = `#version 300 es
 precision highp float;
@@ -88,12 +112,13 @@ void main() {
   fragColor = vec4(finalColor, alpha);
 }`;
 
+// Keep the named export for compatibility
 export const Plasma = ({
   color = '#6f00ff',
   speed = 0.5,
   direction = 'forward',
-  scale = 0.5,
-  opacity = 0.5,
+  scale = 0.3,
+  opacity = 0.8,
   mouseInteractive = false,
 }) => {
   const containerRef = useRef(null);
@@ -107,7 +132,6 @@ export const Plasma = ({
   const heroObserverRef = useRef(null);
   const runningRef = useRef(true);
   const lastFrameRef = useRef(performance.now());
-  const mouseTimeoutRef = useRef(null);
   const mousePosRef = useRef([0, 0]);
 
   // performance sampling for adaptive DPR/FPS
@@ -122,31 +146,16 @@ export const Plasma = ({
     let mounted = true;
 
     try {
-            // adaptive initial DPR
-      // ---------- adaptive device detection (small, safe change) ----------
-      // Treat touch-capable devices as "mobile" even if the viewport width is large.
-      // This prevents "Request Desktop Site" on phones from forcing desktop-quality
-      // DPR/FPS/power modes which cause large battery/CPU usage.
+      // ---------- adaptive initial DPR (unchanged logic) ----------
       const rawDpr = Math.max(1, Math.min(window.devicePixelRatio || 1, 2));
-
-      // detect touch device (phones/tablets): either 'ontouchstart' or maxTouchPoints
-      const isTouchDevice = typeof window !== 'undefined' &&
-                            ('ontouchstart' in window || (navigator && navigator.maxTouchPoints > 0));
-
-      // keep small-screen check too (desktop browsers on tablets may still be touchCapable)
+      const isTouchDevice =
+        typeof window !== 'undefined' &&
+        ('ontouchstart' in window || (navigator && navigator.maxTouchPoints > 0));
       const isSmallScreen = window.innerWidth < 768;
-
-      // final decision: treat as mobile if touch-capable OR small screen
       const isMobile = isTouchDevice || isSmallScreen;
-
-      // cap DPR more aggressively on true mobile devices
       const initialDpr = isMobile ? Math.min(rawDpr, 1) : Math.min(rawDpr, 1.5);
-
-      // prefer lower FPS on mobile/touch to save CPU/battery
       const initialFPS = isMobile ? 18 : 24;
       frameIntervalRef.current = 1000 / initialFPS;
-
-      // prefer lower GPU profile on mobile/touch devices to avoid overheating / heavy battery drain
       const powerPref = isMobile ? 'low-power' : 'high-performance';
 
       const renderer = new Renderer({
@@ -229,16 +238,19 @@ export const Plasma = ({
       roRef.current = ro;
       setSize();
 
-      // ---------- mouse handling (throttle) ----------
-      const handleMouseMove = (e) => {
+      // throttled fallback for window resize (passive)
+      const throttledSetSize = throttle(setSize, 200);
+      window.addEventListener('resize', throttledSetSize, { passive: true });
+
+      // ---------- mouse handling (throttled) ----------
+      const rawHandleMouseMove = (e) => {
         if (!mouseInteractive || !programRef.current) return;
-        if (mouseTimeoutRef.current) return;
-        mouseTimeoutRef.current = setTimeout(() => {
-          mouseTimeoutRef.current = null;
-        }, 16);
+        // support both pointer and touch events
+        const clientX = e.touches && e.touches[0] ? e.touches[0].clientX : e.clientX;
+        const clientY = e.touches && e.touches[0] ? e.touches[0].clientY : e.clientY;
         const rect = containerEl.getBoundingClientRect();
-        const x = e.clientX - rect.left;
-        const y = e.clientY - rect.top;
+        const x = clientX - rect.left;
+        const y = clientY - rect.top;
         mousePosRef.current[0] = x;
         mousePosRef.current[1] = y;
         if (programRef.current.uniforms && programRef.current.uniforms.uMouse) {
@@ -248,9 +260,12 @@ export const Plasma = ({
         }
       };
 
+      // throttle mouse moves to ~60fps or less (16ms)
+      const throttledHandleMouseMove = throttle(rawHandleMouseMove, 16);
+
       if (mouseInteractive) {
-        containerEl.addEventListener('mousemove', handleMouseMove, { passive: true });
-        containerEl.addEventListener('touchmove', handleMouseMove, { passive: true });
+        containerEl.addEventListener('mousemove', throttledHandleMouseMove, { passive: true });
+        containerEl.addEventListener('touchmove', throttledHandleMouseMove, { passive: true });
       }
 
       // ---------- visibility handling (pause when tab hidden) ----------
@@ -314,15 +329,12 @@ export const Plasma = ({
           perfSamplesRef.current = [];
 
           // if avg frame time is > threshold, reduce DPR or FPS
-          // threshold tuned conservatively
           if (avg > 28) {
-            // reduce DPR in small steps
             const rendererLocal = rendererRef.current;
             if (rendererLocal) {
-              const curDpr = rendererLocal.dpr || rendererLocal._dpr || 1; // library internals differ
+              const curDpr = rendererLocal.dpr || rendererLocal._dpr || 1;
               const newDpr = Math.max(0.75, Math.round((curDpr - 0.5) * 100) / 100);
               if (newDpr < curDpr) {
-                // apply new DPR and re-size once
                 try {
                   rendererLocal.dpr = newDpr;
                 } catch (e) {
@@ -330,7 +342,6 @@ export const Plasma = ({
                     rendererLocal.setDpr && rendererLocal.setDpr(newDpr);
                   } catch {}
                 }
-                // reapply size to update buffers
                 requestAnimationFrame(() => {
                   const rect = containerEl.getBoundingClientRect();
                   rendererLocal.setSize(Math.max(1, Math.floor(rect.width)), Math.max(1, Math.floor(rect.height)));
@@ -338,12 +349,10 @@ export const Plasma = ({
               }
             }
 
-            // lower FPS a bit if necessary
             const curInterval = frameIntervalRef.current;
-            const newFPS = Math.max(12, Math.round(1000 / curInterval) - 3); // reduce by ~3fps steps
+            const newFPS = Math.max(12, Math.round(1000 / curInterval) - 3);
             frameIntervalRef.current = 1000 / newFPS;
           } else {
-            // if perf good, gently increase FPS back toward desktop default
             const curFPS = Math.round(1000 / frameIntervalRef.current);
             const target = window.innerWidth < 768 ? 18 : 24;
             if (curFPS < target) {
@@ -385,7 +394,6 @@ export const Plasma = ({
           // swallow render errors
         }
 
-        // measure frame time and feed adaptive logic
         const frameMs = performance.now() - start;
         recordFrameMs(frameMs);
       };
@@ -409,9 +417,10 @@ export const Plasma = ({
           if (heroObserver) heroObserver.disconnect();
         } catch (e) {}
         document.removeEventListener('visibilitychange', onVisibility);
+        window.removeEventListener('resize', throttledSetSize);
         if (mouseInteractive) {
-          containerEl.removeEventListener('mousemove', handleMouseMove);
-          containerEl.removeEventListener('touchmove', handleMouseMove);
+          containerEl.removeEventListener('mousemove', throttledHandleMouseMove);
+          containerEl.removeEventListener('touchmove', throttledHandleMouseMove);
         }
         try {
           const rendererLocal = rendererRef.current;
