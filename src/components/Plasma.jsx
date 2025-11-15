@@ -4,13 +4,17 @@ import { Renderer, Program, Mesh, Triangle } from 'ogl';
 import './Plasma.css';
 
 // helper: convert hex to normalized rgb array
-const hexToRgb = hex => {
+const hexToRgb = (hex) => {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
   if (!result) return [1, 0.5, 0.2];
-  return [parseInt(result[1], 16) / 255, parseInt(result[2], 16) / 255, parseInt(result[3], 16) / 255];
+  return [
+    parseInt(result[1], 16) / 255,
+    parseInt(result[2], 16) / 255,
+    parseInt(result[3], 16) / 255,
+  ];
 };
 
-// shader strings (unchanged)
+// shader strings (preserved exactly)
 const vertex = `#version 300 es
 precision highp float;
 in vec2 position;
@@ -84,40 +88,48 @@ void main() {
   fragColor = vec4(finalColor, alpha);
 }`;
 
-const DEFAULT_TARGET_FPS = 24;
-
 export const Plasma = ({
   color = '#6f00ff',
   speed = 0.5,
   direction = 'forward',
-  scale = 1.5,
+  scale = 0.5,
   opacity = 0.5,
-  mouseInteractive = true,
+  mouseInteractive = false,
 }) => {
   const containerRef = useRef(null);
 
-  // persistent refs for renderer/program/mesh/loop
+  // persistent refs
   const rendererRef = useRef(null);
   const programRef = useRef(null);
   const meshRef = useRef(null);
   const rafRef = useRef(null);
   const roRef = useRef(null);
+  const heroObserverRef = useRef(null);
   const runningRef = useRef(true);
   const lastFrameRef = useRef(performance.now());
   const mouseTimeoutRef = useRef(null);
   const mousePosRef = useRef([0, 0]);
 
-  // ---------- INIT (run once) ----------
+  // performance sampling for adaptive DPR/FPS
+  const perfSamplesRef = useRef([]);
+  const perfSampleFrames = 30;
+  const areaRef = useRef(0);
+  const frameIntervalRef = useRef(1000 / 24); // default 24 fps
+
   useEffect(() => {
     const containerEl = containerRef.current;
     if (!containerEl) return;
-
     let mounted = true;
+
     try {
-      // safe DPR capping
+      // adaptive initial DPR
       const rawDpr = Math.max(1, Math.min(window.devicePixelRatio || 1, 2));
       const isMobile = window.innerWidth < 768;
-      const dpr = isMobile ? Math.min(rawDpr, 1) : Math.min(rawDpr, 1.5);
+      const initialDpr = isMobile ? Math.min(rawDpr, 1) : Math.min(rawDpr, 1.5);
+
+      // adaptive initial FPS
+      const initialFPS = isMobile ? 18 : 24;
+      frameIntervalRef.current = 1000 / initialFPS;
 
       const renderer = new Renderer({
         alpha: true,
@@ -126,7 +138,7 @@ export const Plasma = ({
         powerPreference: 'high-performance',
         depth: false,
         stencil: false,
-        dpr,
+        dpr: initialDpr,
       });
       rendererRef.current = renderer;
       const gl = renderer.gl;
@@ -136,9 +148,8 @@ export const Plasma = ({
       canvas.style.height = '100%';
       containerEl.appendChild(canvas);
 
-      // create geometry/program/mesh (shader uniforms created here)
+      // Program & mesh (shader uniforms)
       const geometry = new Triangle(gl);
-
       const customColorRgb = color ? hexToRgb(color) : [1, 1, 1];
       const directionMultiplier = direction === 'reverse' ? -1.0 : 1.0;
 
@@ -162,7 +173,7 @@ export const Plasma = ({
       programRef.current = program;
       meshRef.current = new Mesh(gl, { geometry, program });
 
-      // ---------- resize handler (debounced via rAF) ----------
+      // ---------- setSize with area threshold to avoid tiny resizes ----------
       let sizePending = false;
       const setSize = () => {
         if (!mounted || !containerEl || !rendererRef.current) return;
@@ -173,6 +184,18 @@ export const Plasma = ({
           const rect = containerEl.getBoundingClientRect();
           const width = Math.max(1, Math.floor(rect.width));
           const height = Math.max(1, Math.floor(rect.height));
+          const newArea = width * height;
+          // if previous area is set, ignore tiny changes (<2%)
+          if (areaRef.current > 0) {
+            const delta = Math.abs(newArea - areaRef.current) / areaRef.current;
+            if (delta < 0.02) {
+              // skip small changes
+              return;
+            }
+          }
+          areaRef.current = newArea;
+
+          // apply size
           rendererRef.current.setSize(width, height);
           if (programRef.current && programRef.current.uniforms && programRef.current.uniforms.iResolution) {
             const res = programRef.current.uniforms.iResolution.value;
@@ -190,7 +213,6 @@ export const Plasma = ({
       // ---------- mouse handling (throttle) ----------
       const handleMouseMove = (e) => {
         if (!mouseInteractive || !programRef.current) return;
-        // throttle updates to ~60fps (or set to 30ms if needed)
         if (mouseTimeoutRef.current) return;
         mouseTimeoutRef.current = setTimeout(() => {
           mouseTimeoutRef.current = null;
@@ -212,17 +234,15 @@ export const Plasma = ({
         containerEl.addEventListener('touchmove', handleMouseMove, { passive: true });
       }
 
-      // ---------- visibility handling ----------
+      // ---------- visibility handling (pause when tab hidden) ----------
       const onVisibility = () => {
         if (document.hidden) {
-          // stop running; cancel RAF
           runningRef.current = false;
           if (rafRef.current) {
             cancelAnimationFrame(rafRef.current);
             rafRef.current = null;
           }
         } else {
-          // resume
           if (!runningRef.current) {
             runningRef.current = true;
             lastFrameRef.current = performance.now();
@@ -232,9 +252,89 @@ export const Plasma = ({
       };
       document.addEventListener('visibilitychange', onVisibility);
 
-      // ---------- render loop (frame limiter kept) ----------
-      const targetFPS = DEFAULT_TARGET_FPS;
-      const frameInterval = 1000 / targetFPS;
+      // ---------- observe #hero and pause when it is not visible ----------
+      let heroObserver = null;
+      try {
+        const heroEl = document.querySelector('#hero');
+        if (heroEl) {
+          heroObserver = new IntersectionObserver(
+            (entries) => {
+              entries.forEach((entry) => {
+                if (!entry.isIntersecting) {
+                  // pause
+                  runningRef.current = false;
+                  if (rafRef.current) {
+                    cancelAnimationFrame(rafRef.current);
+                    rafRef.current = null;
+                  }
+                } else {
+                  // resume (only if tab visible)
+                  if (!runningRef.current && !document.hidden) {
+                    runningRef.current = true;
+                    lastFrameRef.current = performance.now();
+                    rafRef.current = requestAnimationFrame(loop);
+                  }
+                }
+              });
+            },
+            { threshold: 0 }
+          );
+          heroObserver.observe(heroEl);
+          heroObserverRef.current = heroObserver;
+        }
+      } catch (err) {
+        // ignore
+      }
+
+      // ---------- adaptive performance helpers ----------
+      const recordFrameMs = (ms) => {
+        perfSamplesRef.current.push(ms);
+        if (perfSamplesRef.current.length >= perfSampleFrames) {
+          const arr = perfSamplesRef.current;
+          const avg = arr.reduce((a, b) => a + b, 0) / arr.length;
+          perfSamplesRef.current = [];
+
+          // if avg frame time is > threshold, reduce DPR or FPS
+          // threshold tuned conservatively
+          if (avg > 28) {
+            // reduce DPR in small steps
+            const rendererLocal = rendererRef.current;
+            if (rendererLocal) {
+              const curDpr = rendererLocal.dpr || rendererLocal._dpr || 1; // library internals differ
+              const newDpr = Math.max(0.75, Math.round((curDpr - 0.5) * 100) / 100);
+              if (newDpr < curDpr) {
+                // apply new DPR and re-size once
+                try {
+                  rendererLocal.dpr = newDpr;
+                } catch (e) {
+                  try {
+                    rendererLocal.setDpr && rendererLocal.setDpr(newDpr);
+                  } catch {}
+                }
+                // reapply size to update buffers
+                requestAnimationFrame(() => {
+                  const rect = containerEl.getBoundingClientRect();
+                  rendererLocal.setSize(Math.max(1, Math.floor(rect.width)), Math.max(1, Math.floor(rect.height)));
+                });
+              }
+            }
+
+            // lower FPS a bit if necessary
+            const curInterval = frameIntervalRef.current;
+            const newFPS = Math.max(12, Math.round(1000 / curInterval) - 3); // reduce by ~3fps steps
+            frameIntervalRef.current = 1000 / newFPS;
+          } else {
+            // if perf good, gently increase FPS back toward desktop default
+            const curFPS = Math.round(1000 / frameIntervalRef.current);
+            const target = window.innerWidth < 768 ? 18 : 24;
+            if (curFPS < target) {
+              frameIntervalRef.current = 1000 / (curFPS + 1);
+            }
+          }
+        }
+      };
+
+      // ---------- render loop (with frame limiter) ----------
       const t0 = performance.now();
       let lastFrameTime = lastFrameRef.current;
 
@@ -242,33 +342,33 @@ export const Plasma = ({
         if (!mounted) return;
         rafRef.current = requestAnimationFrame(loop);
 
-        // if paused due to visibility, skip render
         if (!runningRef.current || document.hidden) {
           return;
         }
 
         const elapsed = t - lastFrameTime;
-        if (elapsed < frameInterval) {
+        if (elapsed < frameIntervalRef.current) {
           return;
         }
-        lastFrameTime = t - (elapsed % frameInterval);
+        lastFrameTime = t - (elapsed % frameIntervalRef.current);
 
-        // update time uniform
+        const start = performance.now();
         if (programRef.current && programRef.current.uniforms && programRef.current.uniforms.iTime) {
-          // keep original behavior: allow ping-pong via props if needed
           const timeValue = (t - t0) * 0.001;
           programRef.current.uniforms.iTime.value = timeValue;
         }
 
-        // render
         try {
           if (rendererRef.current && meshRef.current) {
             rendererRef.current.render({ scene: meshRef.current });
           }
         } catch (err) {
-          // swallow render errors to avoid crash loops
-          // console.error('Plasma render error', err);
+          // swallow render errors
         }
+
+        // measure frame time and feed adaptive logic
+        const frameMs = performance.now() - start;
+        recordFrameMs(frameMs);
       };
 
       // start loop
@@ -279,34 +379,33 @@ export const Plasma = ({
       // cleanup
       return () => {
         mounted = false;
-        // cancel RAF
         if (rafRef.current) {
           cancelAnimationFrame(rafRef.current);
           rafRef.current = null;
         }
-        // disconnect observer
         try {
           ro.disconnect();
         } catch (e) {}
-        // remove listeners
+        try {
+          if (heroObserver) heroObserver.disconnect();
+        } catch (e) {}
         document.removeEventListener('visibilitychange', onVisibility);
         if (mouseInteractive) {
           containerEl.removeEventListener('mousemove', handleMouseMove);
           containerEl.removeEventListener('touchmove', handleMouseMove);
         }
-        // remove canvas
         try {
           const rendererLocal = rendererRef.current;
           if (rendererLocal && rendererLocal.gl && rendererLocal.gl.canvas && rendererLocal.gl.canvas.parentNode === containerEl) {
             containerEl.removeChild(rendererLocal.gl.canvas);
           }
         } catch (e) {}
-        // release refs
         rendererRef.current = null;
         programRef.current = null;
         meshRef.current = null;
         roRef.current = null;
-        mouseTimeoutRef.current = null;
+        heroObserverRef.current = null;
+        perfSamplesRef.current = [];
       };
     } catch (error) {
       console.error('Failed to initialize Plasma:', error);
@@ -314,7 +413,7 @@ export const Plasma = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []); // init once
 
-  // ---------- UNIFORM UPDATES (cheap) ----------
+  // ---------- cheap uniform updates ----------
   useEffect(() => {
     const program = programRef.current;
     if (!program || !program.uniforms) return;
