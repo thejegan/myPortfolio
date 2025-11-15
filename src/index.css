@@ -1,7 +1,13 @@
+/* src/index.css
+   Tailwind + small global styles for the portfolio.
+   Defensive layout fixes added to prevent horizontal scrolling.
+*/
+
 @tailwind base;
 @tailwind components;
 @tailwind utilities;
 
+/* Color variables for easy theme tweaks */
 :root {
   --bg: #0f1724;
   --panel: #0b1220;
@@ -9,63 +15,227 @@
   --accent: #5b8def;
   --accent-600: #3a6fe8;
   --card: #0b1320;
+  --text: #e6eef8;
 }
 
-/* layout basics */
+/* -----------------------------
+   Layout safety + overflow fixes
+   ----------------------------- */
+
+/* Prevent horizontal overflow globally */
+html, body {
+  overflow-x: hidden; /* hide horizontal overflow */
+}
+
+/* Keep root height preserved */
 html, body, #root {
   height: 100%;
-  overflow-x: hidden;
-}
-
-/* Body defaults */
-body {
-  margin: 0;
-  font-family: 'Inter', system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial, sans-serif;
-  background: var(--bg);
-  color: #e6eef8;
+  background: linear-gradient(180deg, var(--bg) 0%, #07090f 100%);
+  color: var(--text);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
-  line-height: 1.5;
-  -webkit-tap-highlight-color: transparent;
-  min-height: 100vh;
-  overflow-y: auto;
-
-  /* Keep default scrollbar behavior for accessibility.
-     Visual hiding only for pointer-based (desktop) devices is applied below. */
-  scrollbar-width: auto;
-  -ms-overflow-style: auto;
+  font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Helvetica Neue", Arial;
 }
 
-/* Visual-only scrollbar hiding for pointer (mouse) devices.
-   This hides the scrollbar visually on desktop while keeping it available
-   to keyboard and assistive tech. Remove the media query if you prefer not to hide. */
-@media (pointer: fine) {
-  /* Chrome / WebKit */
-  body::-webkit-scrollbar {
-    width: 0;
-    height: 0;
+/* Box sizing and layout safety */
+*, *::before, *::after {
+  box-sizing: border-box;
+}
+
+/* Images/media shouldn't exceed their container */
+img, picture, video, iframe {
+  max-width: 100%;
+  height: auto;
+  display: block;
+}
+
+/* Full-bleed sections without overflow */
+.full-bleed, .section-bleed {
+  width: 100%; 
+  margin-left: 0;
+  margin-right: 0;
+}
+
+/* Main container */
+.container-max, .page-wrapper {
+  width: 100%;
+  max-width: 80rem;
+  margin-left: auto;
+  margin-right: auto;
+  overflow-x: hidden;
+  padding-left: 1.5rem;
+  padding-right: 1.5rem;
+}
+
+/* No overflow when needed */
+.no-overflow-x {
+  overflow-x: hidden !important;
+}
+
+/* Plasma / Canvas background safety */
+.plasma-container,
+.plasma-fallback,
+canvas {
+  position: fixed;
+  inset: 0;
+  width: 100%;
+  height: 100%;
+  max-height: 100vh;
+  pointer-events: none;
+  touch-action: none;
+  z-index: -1;
+  transform: translateZ(0);
+}
+
+/* Plasma fallback decorative layer */
+.plasma-fallback {
+  background: radial-gradient(ellipse at center, rgba(88, 102, 255, 0.06) 0%, rgba(10, 12, 18, 0.0) 40%);
+  backdrop-filter: blur(0px);
+}
+
+/* Small utility to ensure decorative background doesn't interfere */
+[aria-hidden="true"] {
+  pointer-events: none;
+}
+
+/* Form elements */
+input, textarea, select, button {
+  font-family: inherit;
+}
+
+/* Focus visibility */
+:focus {
+  outline: 2px solid rgba(91,141,239,0.16);
+  outline-offset: 2px;
+}
+
+/* Mobile container adjustments */
+@media (max-width: 640px) {
+  .container-max {
+    padding-left: 1rem;
+    padding-right: 1rem;
   }
-  /* Firefox */
-  body {
-    scrollbar-width: none;
+}
+
+/* Reduce animation for low-motion users */
+@media (prefers-reduced-motion: reduce) {
+  * {
+    animation-duration: 0.001ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.001ms !important;
+    scroll-behavior: auto !important;
   }
 }
 
-/* Smooth scrolling (keeps behavior site-wide) */
-html {
-  scroll-behavior: smooth;
+/* ======================================================
+   TOPBAR + BUTTONS + ANIMATIONS (GLOBAL STYLES)
+   ====================================================== */
+
+/* Topbar container */
+.topbar-wrapper {
+  position: fixed;
+  top: 1rem;
+  left: 50%;
+  transform: translateX(-50%);
+  z-index: 50;
+  width: min(980px, 92%);
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 0.75rem;
+  background: rgba(15,23,30,0.55);
+  backdrop-filter: blur(6px);
+  border: 1px solid rgba(38,50,66,0.45);
+  border-radius: 9999px;
+  padding: 0.35rem 0.75rem;
+  box-shadow: 0 8px 30px rgba(2,6,23,0.45);
+  animation: pop 420ms cubic-bezier(.2,.9,.3,1) both;
 }
 
-/* Scope touch-action to plasma container only so page-wide gestures are not blocked.
-   If you need touch-action elsewhere (carousels), add it locally to those elements. */
-.plasma-container {
-  touch-action: pan-y;
+/* Action buttons */
+.btn-action {
+  display: inline-flex;
+  align-items: center;
+  gap: 0.5rem;
+  padding: 0.4rem 1rem;
+  border-radius: 9999px;
+  font-size: 0.875rem;
+  font-weight: 600;
+  text-decoration: none;
+  transition: 0.18s ease;
+  background: rgba(11, 17, 24, 0.65);
+  color: #e6eef8;
+  border: 1px solid rgba(148,163,184,0.08);
+  box-shadow: 0 6px 20px rgba(2,6,23,0.35);
+}
+.btn-action:hover {
+  background: rgba(20, 25, 35, 0.82);
+  transform: translateY(-2px);
 }
 
-/* Preserve overscroll behavior: prevent horizontal overscroll on body (optional).
-   If you prefer not to affect global gestures, move this to a specific wrapper instead. */
-body {
-  overscroll-behavior-x: none;
+/* Secondary variant */
+.btn-muted {
+  background: rgba(255,255,255,0.06);
+  color: #d1d8e6;
 }
 
-/* END of file */
+/* Social icons */
+.round-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  width: 2.5rem;
+  height: 2.5rem;
+  border-radius: 9999px;
+  border: 1px solid rgba(148,163,184,0.06);
+  color: #dbeafe;
+  transition: 0.16s ease;
+  text-decoration: none;
+}
+.round-icon:hover {
+  background: rgba(255,255,255,0.04);
+  transform: translateY(-2px);
+}
+
+/* Animations */
+@keyframes pop {
+  0% { transform: scale(0.98); opacity: 0; }
+  60% { transform: scale(1.02); opacity: 1; }
+  100% { transform: scale(1); opacity: 1; }
+}
+@keyframes pulse-slow {
+  0% { transform: scale(1); opacity: 1; }
+  50% { transform: scale(1.5); opacity: 0.55; }
+  100% { transform: scale(1); opacity: 1; }
+}
+.animate-pulse-slow { animation: pulse-slow 2.6s ease-in-out infinite; }
+
+@keyframes fadeUp {
+  from { opacity: 0; transform: translateY(10px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+.animate-fade-up { animation: fadeUp 600ms cubic-bezier(.16,.9,.3,1); }
+.animate-fade-up-fast { animation: fadeUp 360ms cubic-bezier(.2,.9,.3,1); }
+.animate-fade-up-slow { animation: fadeUp 900ms cubic-bezier(.16,.9,.3,1); }
+
+.delay-100 { animation-delay: 100ms; }
+.delay-150 { animation-delay: 150ms; }
+.delay-200 { animation-delay: 200ms; }
+
+@keyframes floaty {
+  0% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
+  100% { transform: translateY(0); }
+}
+.animate-float { animation: floaty 6s ease-in-out infinite; }
+
+/* Mobile adjustments */
+@media (max-width: 560px) {
+  .topbar-wrapper {
+    padding-left: 0.5rem;
+    padding-right: 0.5rem;
+    width: calc(100% - 2rem);
+  }
+  .btn-action { padding: 0.35rem 0.8rem; font-size: 0.8rem; }
+  .round-icon { width: 2.25rem; height: 2.25rem; }
+}
