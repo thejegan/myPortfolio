@@ -1,9 +1,9 @@
 // src/components/Plasma.jsx
 import { useEffect, useRef } from 'react';
 import { Renderer, Program, Mesh, Triangle } from 'ogl';
+import './Plasma.css';
 
-// helper: convert hex to normalized rgb array
-const hexToRgb = (hex) => {
+const hexToRgb = hex => {
   const result = /^#?([a-f\d]{2})([a-f\d]{2})([a-f\d]{2})$/i.exec(hex);
   if (!result) return [1, 0.5, 0.2];
   return [
@@ -13,31 +13,6 @@ const hexToRgb = (hex) => {
   ];
 };
 
-// tiny throttle utility
-function throttle(fn, wait = 100) {
-  let last = 0;
-  let timer = null;
-  return (...args) => {
-    const now = Date.now();
-    const remaining = wait - (now - last);
-    if (remaining <= 0) {
-      if (timer) {
-        clearTimeout(timer);
-        timer = null;
-      }
-      last = now;
-      fn(...args);
-    } else if (!timer) {
-      timer = setTimeout(() => {
-        last = Date.now();
-        timer = null;
-        fn(...args);
-      }, remaining);
-    }
-  };
-}
-
-// shader strings
 const vertex = `#version 300 es
 precision highp float;
 in vec2 position;
@@ -73,7 +48,7 @@ void mainImage(out vec4 o, vec2 C) {
   float i, d, z, T = iTime * uSpeed * uDirection;
   vec3 O, p, S;
 
-  for (vec2 r = iResolution.xy, Q; ++i < 25.; O += o.w/d*o.xyz) {
+  for (vec2 r = iResolution.xy, Q; ++i < 60.; O += o.w/d*o.xyz) {
     p = z*normalize(vec3(C-.5*r,r.y)); 
     p.z -= 4.; 
     S = p;
@@ -106,21 +81,21 @@ void main() {
   vec3 customColor = intensity * uCustomColor;
   vec3 finalColor = mix(rgb, customColor, step(0.5, uUseCustomColor));
   
-  // Remove white overlay completely - only show bright colored areas
-  float luminance = dot(finalColor, vec3(0.299, 0.587, 0.114));
-  float alpha = pow(luminance, 4.0) * uOpacity * 0.25;
-  fragColor = vec4(finalColor * 2.0, alpha);
+  float alpha = length(rgb) * uOpacity;
+  fragColor = vec4(finalColor, alpha);
 }`;
 
-const Plasma = ({
-  color = '#6f00ff',
-  speed = 0.5,
+export const Plasma = ({
+  color = '#ffffff',
+  speed = 1,
   direction = 'forward',
-  scale = 0.3,
-  opacity = 1.0,
-  mouseInteractive = false,
+  scale = 1,
+  opacity = 1,
+  mouseInteractive = true,
 }) => {
   const containerRef = useRef(null);
+
+  // Performance and rendering refs (preserved from optimized)
   const rendererRef = useRef(null);
   const programRef = useRef(null);
   const meshRef = useRef(null);
@@ -135,9 +110,9 @@ const Plasma = ({
   const frameIntervalRef = useRef(1000 / 24);
 
   useEffect(() => {
-    const containerEl = containerRef.current;
-    if (!containerEl) return;
+    if (!containerRef.current) return;
     let mounted = true;
+    const containerEl = containerRef.current;
 
     try {
       const rawDpr = Math.max(1, Math.min(window.devicePixelRatio || 1, 2));
@@ -174,8 +149,8 @@ const Plasma = ({
       const directionMultiplier = direction === 'reverse' ? -1.0 : 1.0;
 
       const program = new Program(gl, {
-        vertex,
-        fragment,
+        vertex: vertex,
+        fragment: fragment,
         uniforms: {
           iTime: { value: 0 },
           iResolution: { value: new Float32Array([gl.drawingBufferWidth, gl.drawingBufferHeight]) },
@@ -193,6 +168,7 @@ const Plasma = ({
       programRef.current = program;
       meshRef.current = new Mesh(gl, { geometry, program });
 
+      // Resize + DPR + sizing logic (preserved)
       let sizePending = false;
       const MAX_PIXELS = 1920 * 1080;
 
@@ -254,14 +230,28 @@ const Plasma = ({
         });
       };
 
-      const ro = new ResizeObserver(throttle(setSize, 150));
+      // throttled resize
+      const throttledSetSize = (() => {
+        let last = 0; let timer = null; const wait = 150;
+        return () => {
+          const now = Date.now();
+          const remaining = wait - (now - last);
+          if (remaining <= 0) {
+            if (timer) { clearTimeout(timer); timer = null; }
+            last = now; setSize();
+          } else if (!timer) {
+            timer = setTimeout(() => { last = Date.now(); timer = null; setSize(); }, remaining);
+          }
+        };
+      })();
+
+      const ro = new ResizeObserver(throttledSetSize);
       ro.observe(containerEl);
       roRef.current = ro;
       setSize();
-
-      const throttledSetSize = throttle(setSize, 200);
       window.addEventListener('resize', throttledSetSize, { passive: true });
 
+      // mouse handling (throttled)
       const rawHandleMouseMove = (e) => {
         if (!mouseInteractive || !programRef.current) return;
         const clientX = e.touches && e.touches[0] ? e.touches[0].clientX : e.clientX;
@@ -276,13 +266,26 @@ const Plasma = ({
         }
       };
 
-      const throttledHandleMouseMove = throttle(rawHandleMouseMove, 16);
+      const throttledHandleMouseMove = (() => {
+        let last = 0; let timer = null; const wait = 16;
+        return (...args) => {
+          const now = Date.now();
+          const remaining = wait - (now - last);
+          if (remaining <= 0) {
+            if (timer) { clearTimeout(timer); timer = null; }
+            last = now; rawHandleMouseMove(...args);
+          } else if (!timer) {
+            timer = setTimeout(() => { last = Date.now(); timer = null; rawHandleMouseMove(...args); }, remaining);
+          }
+        };
+      })();
 
       if (mouseInteractive) {
         containerEl.addEventListener('mousemove', throttledHandleMouseMove, { passive: true });
         containerEl.addEventListener('touchmove', throttledHandleMouseMove, { passive: true });
       }
 
+      // visibility handling
       const onVisibility = () => {
         if (document.hidden) {
           runningRef.current = false;
@@ -300,35 +303,33 @@ const Plasma = ({
       };
       document.addEventListener('visibilitychange', onVisibility);
 
-      let heroObserver = null;
+      // intersection observer for hero to pause when offscreen
       try {
         const heroEl = document.querySelector('#hero');
         if (heroEl) {
-          heroObserver = new IntersectionObserver(
-            (entries) => {
-              entries.forEach((entry) => {
-                if (!entry.isIntersecting) {
-                  runningRef.current = false;
-                  if (rafRef.current) {
-                    cancelAnimationFrame(rafRef.current);
-                    rafRef.current = null;
-                  }
-                } else {
-                  if (!runningRef.current && !document.hidden) {
-                    runningRef.current = true;
-                    lastFrameRef.current = performance.now();
-                    rafRef.current = requestAnimationFrame(loop);
-                  }
+          const heroObserver = new IntersectionObserver((entries) => {
+            entries.forEach((entry) => {
+              if (!entry.isIntersecting) {
+                runningRef.current = false;
+                if (rafRef.current) {
+                  cancelAnimationFrame(rafRef.current);
+                  rafRef.current = null;
                 }
-              });
-            },
-            { threshold: 0 }
-          );
+              } else {
+                if (!runningRef.current && !document.hidden) {
+                  runningRef.current = true;
+                  lastFrameRef.current = performance.now();
+                  rafRef.current = requestAnimationFrame(loop);
+                }
+              }
+            });
+          }, { threshold: 0 });
           heroObserver.observe(heroEl);
           heroObserverRef.current = heroObserver;
         }
       } catch (err) {}
 
+      // perf sampling to adapt quality
       const recordFrameMs = (ms) => {
         perfSamplesRef.current.push(ms);
         if (perfSamplesRef.current.length >= perfSampleFrames) {
@@ -378,6 +379,7 @@ const Plasma = ({
       const t0 = performance.now();
       let lastFrameTime = lastFrameRef.current;
 
+      // rendering loop (keeps original "pingpong" handling)
       const loop = (t) => {
         if (!mounted) return;
         rafRef.current = requestAnimationFrame(loop);
@@ -390,8 +392,19 @@ const Plasma = ({
 
         const start = performance.now();
         if (programRef.current && programRef.current.uniforms && programRef.current.uniforms.iTime) {
-          const timeValue = (t - t0) * 0.001;
-          programRef.current.uniforms.iTime.value = timeValue;
+          let timeValue = (t - t0) * 0.001;
+          if (direction === 'pingpong') {
+            const pingpongDuration = 10;
+            const segmentTime = timeValue % pingpongDuration;
+            const isForward = Math.floor(timeValue / pingpongDuration) % 2 === 0;
+            const u = segmentTime / pingpongDuration;
+            const smooth = u * u * (3 - 2 * u);
+            const pingpongTime = isForward ? smooth * pingpongDuration : (1 - smooth) * pingpongDuration;
+            programRef.current.uniforms.uDirection.value = 1.0;
+            programRef.current.uniforms.iTime.value = pingpongTime;
+          } else {
+            programRef.current.uniforms.iTime.value = (t - t0) * 0.001;
+          }
         }
 
         try {
@@ -414,12 +427,8 @@ const Plasma = ({
           cancelAnimationFrame(rafRef.current);
           rafRef.current = null;
         }
-        try {
-          ro.disconnect();
-        } catch (e) {}
-        try {
-          if (heroObserver) heroObserver.disconnect();
-        } catch (e) {}
+        try { ro.disconnect(); } catch (e) {}
+        try { if (heroObserverRef.current) heroObserverRef.current.disconnect(); } catch (e) {}
         document.removeEventListener('visibilitychange', onVisibility);
         window.removeEventListener('resize', throttledSetSize);
         if (mouseInteractive) {
@@ -442,8 +451,9 @@ const Plasma = ({
     } catch (error) {
       console.error('Failed to initialize Plasma:', error);
     }
-  }, []);
+  }, [color, speed, direction, scale, opacity, mouseInteractive]);
 
+  // update uniforms when props change (kept simple and safe)
   useEffect(() => {
     const program = programRef.current;
     if (!program || !program.uniforms) return;
@@ -455,9 +465,7 @@ const Plasma = ({
       arr[1] = rgb[1];
       arr[2] = rgb[2];
     }
-    if (program.uniforms.uUseCustomColor) {
-      program.uniforms.uUseCustomColor.value = color ? 1.0 : 0.0;
-    }
+    if (program.uniforms.uUseCustomColor) program.uniforms.uUseCustomColor.value = color ? 1.0 : 0.0;
     if (program.uniforms.uSpeed) program.uniforms.uSpeed.value = speed * 0.4;
     if (program.uniforms.uDirection) program.uniforms.uDirection.value = direction === 'reverse' ? -1.0 : 1.0;
     if (program.uniforms.uScale) program.uniforms.uScale.value = scale;
@@ -465,23 +473,7 @@ const Plasma = ({
     if (program.uniforms.uMouseInteractive) program.uniforms.uMouseInteractive.value = mouseInteractive ? 1.0 : 0.0;
   }, [color, speed, direction, scale, opacity, mouseInteractive]);
 
-  return (
-    <div 
-      ref={containerRef} 
-      style={{
-        position: 'fixed',
-        inset: 0,
-        width: '100%',
-        height: '100%',
-        pointerEvents: 'none',
-        zIndex: 0,
-        willChange: 'transform, opacity',
-        contain: 'paint',
-        touchAction: 'pan-y'
-      }}
-      aria-hidden="true" 
-    />
-  );
+  return <div ref={containerRef} className="plasma-container" aria-hidden="true" />;
 };
 
 export default Plasma;
