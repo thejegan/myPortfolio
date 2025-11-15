@@ -36,8 +36,9 @@ export default function Portfolio() {
     if (!isSmallScreen) return true;
 
     // On small screens, check device capability hints (best-effort)
-    const deviceMemory = navigator.deviceMemory || 4; // GB, fallback to 4GB if unavailable
-    const cores = navigator.hardwareConcurrency || 4; // logical cores, fallback to 4
+    // Be stricter by using conservative fallbacks when unavailable
+    const deviceMemory = navigator.deviceMemory || 1; // GB; fallback to 1 (more conservative)
+    const cores = navigator.hardwareConcurrency || 2; // logical cores; fallback to 2
 
     // Require modest capability on mobile: at least 2GB RAM and >=2 cores
     if (deviceMemory >= 2 && cores >= 2) return true;
@@ -52,7 +53,7 @@ export default function Portfolio() {
       color: '#6f00ff',
       speed: 0.3,
       direction: 'forward',
-      scale: 0.3,
+      scale: 0.8,
       opacity: 0.4,
       mouseInteractive: false,
     }),
@@ -62,8 +63,8 @@ export default function Portfolio() {
   return (
     <div className="relative min-h-screen bg-slate-950 text-white overflow-x-hidden">
       {/* Plasma Background (lazy-loaded) */}
-      <Suspense fallback={null}>
-        {showPlasma ? <Plasma {...plasmaProps} /> : null}
+      <Suspense fallback={<div className="plasma-fallback" />}>
+        {showPlasma ? <Plasma {...plasmaProps} /> : <div className="plasma-fallback" />}
       </Suspense>
 
       {/* Main Content */}

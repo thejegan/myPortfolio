@@ -132,7 +132,6 @@ export const Plasma = ({
   const heroObserverRef = useRef(null);
   const runningRef = useRef(true);
   const lastFrameRef = useRef(performance.now());
-  const mousePosRef = useRef([0, 0]);
 
   // performance sampling for adaptive DPR/FPS
   const perfSamplesRef = useRef([]);
@@ -146,7 +145,7 @@ export const Plasma = ({
     let mounted = true;
 
     try {
-      // ---------- adaptive initial DPR (unchanged logic) ----------
+      // ---------- adaptive initial DPR ----------
       const rawDpr = Math.max(1, Math.min(window.devicePixelRatio || 1, 2));
       const isTouchDevice =
         typeof window !== 'undefined' &&
@@ -201,8 +200,10 @@ export const Plasma = ({
       programRef.current = program;
       meshRef.current = new Mesh(gl, { geometry, program });
 
-      // ---------- setSize with area threshold to avoid tiny resizes ----------
+      // ---------- setSize with area threshold + backbuffer cap ----------
       let sizePending = false;
+      const MAX_PIXELS = 1920 * 1080; // cap for backbuffer roughly 2MP; adjust if you prefer
+
       const setSize = () => {
         if (!mounted || !containerEl || !rendererRef.current) return;
         if (sizePending) return;
@@ -210,21 +211,57 @@ export const Plasma = ({
         requestAnimationFrame(() => {
           sizePending = false;
           const rect = containerEl.getBoundingClientRect();
-          const width = Math.max(1, Math.floor(rect.width));
-          const height = Math.max(1, Math.floor(rect.height));
-          const newArea = width * height;
-          // if previous area is set, ignore tiny changes (<2%)
+          const cssW = Math.max(1, Math.floor(rect.width));
+          const cssH = Math.max(1, Math.floor(rect.height));
+          const cssArea = cssW * cssH;
+
+          // small change guard (<2%)
+          const newArea = cssArea;
           if (areaRef.current > 0) {
             const delta = Math.abs(newArea - areaRef.current) / areaRef.current;
-            if (delta < 0.02) {
-              // skip small changes
-              return;
-            }
+            if (delta < 0.02) return; // ignore tiny changes
           }
           areaRef.current = newArea;
 
-          // apply size
-          rendererRef.current.setSize(width, height);
+          // compute effective DPR to cap pixel count
+          const rendererLocal = rendererRef.current;
+          let effectiveDpr = rendererLocal.dpr || initialDpr || 1;
+          // ensure effective backbuffer pixels <= MAX_PIXELS
+          const desiredPixels = Math.round(cssW * cssH * (effectiveDpr * effectiveDpr));
+          if (desiredPixels > MAX_PIXELS) {
+            const scale = Math.sqrt(MAX_PIXELS / desiredPixels);
+            effectiveDpr = Math.max(0.75, Math.round(effectiveDpr * scale * 100) / 100);
+          }
+
+          // try to set DPR safely
+          try {
+            if (typeof rendererLocal.setDpr === 'function') {
+              rendererLocal.setDpr(effectiveDpr);
+            } else {
+              rendererLocal.dpr = effectiveDpr;
+            }
+          } catch (e) {
+            try {
+              rendererLocal.dpr = effectiveDpr;
+            } catch (e2) {
+              // last resort: ignore
+            }
+          }
+
+          // apply size (library will set gl.drawingBufferWidth/Height accordingly)
+          try {
+            rendererLocal.setSize(cssW, cssH);
+          } catch (e) {
+            // fallback: directly update canvas width/height as a best-effort
+            try {
+              const gl2 = rendererLocal.gl;
+              gl2.canvas.width = Math.round(cssW * effectiveDpr);
+              gl2.canvas.height = Math.round(cssH * effectiveDpr);
+              gl2.canvas.style.width = `${cssW}px`;
+              gl2.canvas.style.height = `${cssH}px`;
+            } catch {}
+          }
+
           if (programRef.current && programRef.current.uniforms && programRef.current.uniforms.iResolution) {
             const res = programRef.current.uniforms.iResolution.value;
             res[0] = rendererRef.current.gl.drawingBufferWidth;
@@ -233,7 +270,7 @@ export const Plasma = ({
         });
       };
 
-      const ro = new ResizeObserver(setSize);
+      const ro = new ResizeObserver(throttle(setSize, 150));
       ro.observe(containerEl);
       roRef.current = ro;
       setSize();
@@ -245,14 +282,11 @@ export const Plasma = ({
       // ---------- mouse handling (throttled) ----------
       const rawHandleMouseMove = (e) => {
         if (!mouseInteractive || !programRef.current) return;
-        // support both pointer and touch events
         const clientX = e.touches && e.touches[0] ? e.touches[0].clientX : e.clientX;
         const clientY = e.touches && e.touches[0] ? e.touches[0].clientY : e.clientY;
         const rect = containerEl.getBoundingClientRect();
         const x = clientX - rect.left;
         const y = clientY - rect.top;
-        mousePosRef.current[0] = x;
-        mousePosRef.current[1] = y;
         if (programRef.current.uniforms && programRef.current.uniforms.uMouse) {
           const mu = programRef.current.uniforms.uMouse.value;
           mu[0] = x;
@@ -260,7 +294,6 @@ export const Plasma = ({
         }
       };
 
-      // throttle mouse moves to ~60fps or less (16ms)
       const throttledHandleMouseMove = throttle(rawHandleMouseMove, 16);
 
       if (mouseInteractive) {
@@ -336,15 +369,22 @@ export const Plasma = ({
               const newDpr = Math.max(0.75, Math.round((curDpr - 0.5) * 100) / 100);
               if (newDpr < curDpr) {
                 try {
-                  rendererLocal.dpr = newDpr;
+                  if (typeof rendererLocal.setDpr === 'function') {
+                    rendererLocal.setDpr(newDpr);
+                  } else {
+                    rendererLocal.dpr = newDpr;
+                  }
                 } catch (e) {
                   try {
-                    rendererLocal.setDpr && rendererLocal.setDpr(newDpr);
+                    rendererLocal.dpr = newDpr;
                   } catch {}
                 }
+                // reapply size to update buffers
                 requestAnimationFrame(() => {
                   const rect = containerEl.getBoundingClientRect();
-                  rendererLocal.setSize(Math.max(1, Math.floor(rect.width)), Math.max(1, Math.floor(rect.height)));
+                  try {
+                    rendererLocal.setSize(Math.max(1, Math.floor(rect.width)), Math.max(1, Math.floor(rect.height)));
+                  } catch {}
                 });
               }
             }
@@ -370,14 +410,10 @@ export const Plasma = ({
         if (!mounted) return;
         rafRef.current = requestAnimationFrame(loop);
 
-        if (!runningRef.current || document.hidden) {
-          return;
-        }
+        if (!runningRef.current || document.hidden) return;
 
         const elapsed = t - lastFrameTime;
-        if (elapsed < frameIntervalRef.current) {
-          return;
-        }
+        if (elapsed < frameIntervalRef.current) return;
         lastFrameTime = t - (elapsed % frameIntervalRef.current);
 
         const start = performance.now();
@@ -391,7 +427,10 @@ export const Plasma = ({
             rendererRef.current.render({ scene: meshRef.current });
           }
         } catch (err) {
-          // swallow render errors
+          // swallow render errors (mobile GPUs sometimes throw)
+          if (process.env.NODE_ENV !== 'production') {
+            console.warn('Plasma render error:', err);
+          }
         }
 
         const frameMs = performance.now() - start;
@@ -436,10 +475,12 @@ export const Plasma = ({
         perfSamplesRef.current = [];
       };
     } catch (error) {
+      // keep init error visible during development
       console.error('Failed to initialize Plasma:', error);
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, []); // init once
+    // run-once effect: this component intentionally initializes only on mount,
+    // uses refs for stateful values and cleans up on unmount.
+  }, []); // run once on mount
 
   // ---------- cheap uniform updates ----------
   useEffect(() => {
