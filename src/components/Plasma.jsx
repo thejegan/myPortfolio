@@ -1,3 +1,4 @@
+// src/components/Plasma.jsx
 import { useEffect, useRef } from 'react';
 import { Renderer, Program, Mesh, Triangle } from 'ogl';
 import './Plasma.css';
@@ -43,7 +44,8 @@ void mainImage(out vec4 o, vec2 C) {
   float i, d, z, T = iTime * uSpeed * uDirection;
   vec3 O, p, S;
 
-  for (vec2 r = iResolution.xy, Q; ++i < 60.; O += o.w/d*o.xyz) {
+  // Reduced iterations from 60 to 40 for better performance
+  for (vec2 r = iResolution.xy, Q; ++i < 40.; O += o.w/d*o.xyz) {
     p = z*normalize(vec3(C-.5*r,r.y)); 
     p.z -= 4.; 
     S = p;
@@ -82,7 +84,7 @@ void main() {
 
 export const Plasma = ({
   color = '#6f00ff',
-  speed = 0.6,
+  speed = 0.5,
   direction = 'forward',
   scale = 1.5,
   opacity = 0.5,
@@ -101,13 +103,15 @@ export const Plasma = ({
     const directionMultiplier = direction === 'reverse' ? -1.0 : 1.0;
 
     const isMobile = window.innerWidth < 768;
-    const dpr = isMobile ? 1 : Math.min(window.devicePixelRatio || 1, 2);
+    // Reduced DPR to 1.5 max for better performance
+    const dpr = isMobile ? 1 : Math.min(window.devicePixelRatio || 1, 1.5);
 
     try {
       const renderer = new Renderer({
         alpha: true,
         antialias: false,
         premultipliedAlpha: true,
+        powerPreference: 'high-performance', // GPU optimization
         dpr: dpr
       });
       
@@ -139,14 +143,21 @@ export const Plasma = ({
 
       const mesh = new Mesh(gl, { geometry, program });
 
+      // Throttle mouse movement updates
+      let mouseTimeout = null;
       const handleMouseMove = e => {
         if (!mouseInteractive) return;
-        const rect = containerEl.getBoundingClientRect();
-        mousePos.current.x = e.clientX - rect.left;
-        mousePos.current.y = e.clientY - rect.top;
-        const mouseUniform = program.uniforms.uMouse.value;
-        mouseUniform[0] = mousePos.current.x;
-        mouseUniform[1] = mousePos.current.y;
+        if (mouseTimeout) return;
+        
+        mouseTimeout = setTimeout(() => {
+          const rect = containerEl.getBoundingClientRect();
+          mousePos.current.x = e.clientX - rect.left;
+          mousePos.current.y = e.clientY - rect.top;
+          const mouseUniform = program.uniforms.uMouse.value;
+          mouseUniform[0] = mousePos.current.x;
+          mouseUniform[1] = mousePos.current.y;
+          mouseTimeout = null;
+        }, 16); // ~60fps throttle
       };
 
       if (mouseInteractive) {
@@ -169,7 +180,21 @@ export const Plasma = ({
       setSize();
 
       const t0 = performance.now();
+      let lastFrameTime = t0;
+      const targetFPS = 30; // Limit to 30 FPS for smoother performance
+      const frameInterval = 1000 / targetFPS;
+      
       const loop = (t) => {
+        const elapsed = t - lastFrameTime;
+        
+        // Frame rate limiter
+        if (elapsed < frameInterval) {
+          rafRef.current = requestAnimationFrame(loop);
+          return;
+        }
+        
+        lastFrameTime = t - (elapsed % frameInterval);
+        
         if (!document.hidden) {
           let timeValue = (t - t0) * 0.001;
           
@@ -197,6 +222,9 @@ export const Plasma = ({
         if (rafRef.current) {
           cancelAnimationFrame(rafRef.current);
         }
+        if (mouseTimeout) {
+          clearTimeout(mouseTimeout);
+        }
         ro.disconnect();
         if (mouseInteractive && containerEl) {
           containerEl.removeEventListener('mousemove', handleMouseMove);
@@ -218,4 +246,3 @@ export const Plasma = ({
 };
 
 export default Plasma;
-
