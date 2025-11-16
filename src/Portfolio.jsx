@@ -38,7 +38,7 @@ export default function Portfolio() {
     <div className="min-h-screen text-white antialiased bg-[color:var(--bg)]">
       <Suspense fallback={null}>
         {mounted && showPlasma && (
-          <div className="hidden lg:block pointer-events-none select-none">
+          <div className="block pointer-events-none select-none">
             <Plasma opacity={0.6} speed={0.5} />
           </div>
         )}
@@ -139,7 +139,7 @@ function TopBar({ showPlasma, setShowPlasma, isScrolled }) {
 
 function Hero() {
   return (
-    <section id="hero" className="min-h-[90vh] flex items-center pt-20">
+    <section id="hero" className="min-h-[90vh] lg:min-h-[75vh] flex items-center pt-20 lg:pt-12">
       <div className="grid lg:grid-cols-2 gap-12 items-center w-full">
         <div className="space-y-8 animate-fade-in-up">
           <div className="inline-flex items-center gap-2 px-4 py-2 rounded-full bg-emerald-500/10 border border-emerald-500/20 backdrop-blur-sm animate-pulse-glow">
@@ -337,9 +337,9 @@ function Skills() {
             <h3 className="text-xl font-semibold mb-4">{category.title}</h3>
             <div className="space-y-2">
               {category.skills.map((skill) => (
-                <div key={skill} className="skill-tag">
+                <span key={skill} className="skill-tag inline-flex items-center px-3 py-1 rounded-full text-sm bg-slate-800/40 sm:block">
                   {skill}
-                </div>
+                </span>
               ))}
             </div>
           </div>
