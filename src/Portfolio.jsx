@@ -219,15 +219,16 @@ function Hero() {
           </div>
 
           <div className="space-y-4">
-            <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold leading-tight">
-              <span className="bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
-                Building Digital
-              </span>
-              <br />
-              <span className="bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent animate-gradient">
-                Experiences
-              </span>
-            </h1>
+              <h1 className="text-5xl sm:text-6xl lg:text-7xl font-bold leading-tight space-y-2">
+                <span className="block bg-gradient-to-r from-white via-slate-200 to-slate-400 bg-clip-text text-transparent">
+                  I'm Jegan,
+                </span>
+
+                <span className="block bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent animate-gradient">
+                  Full-Stack Developer
+                </span>
+              </h1>
+
             <p className="text-lg sm:text-xl text-slate-400 max-w-xl leading-relaxed">
               Full-stack & mobile developer crafting high-performance, user-centric applications with modern tech stacks.
             </p>
@@ -618,3 +619,4 @@ function Footer() {
   );
 }
 // End of file
+ 
