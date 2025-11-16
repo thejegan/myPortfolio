@@ -355,7 +355,7 @@ function Contact() {
 function Footer() {
   return (
     <footer className="mt-12 text-center text-sm text-slate-400">
-      <div>Made by Jegan • © {new Date().getFullYear()}</div>
+      <div>Made by Jega • © {new Date().getFullYear()}</div>
     </footer>
   );
 }
