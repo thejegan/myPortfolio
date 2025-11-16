@@ -35,7 +35,7 @@ const projects = [
     role: 'Design, frontend, performance optimizations',
     image: '/images/projects/portfolio.svg',
     imageSmall: '/images/projects/portfolio.svg',
-    links: { live: '#', github: '#' }
+    links: { live: '#', github: 'https://github.com/thejegan/myPortfolio' }
   },
   {
     id: 'diabetes-predictor',
@@ -59,7 +59,7 @@ const projects = [
     role: 'Dataset curation, model prototyping',
     image: '/images/projects/explicit-detection.svg',
     imageSmall: '/images/projects/explicit-detection.svg',
-    links: { live: '#', github: '#' }
+    links: { live: '#', github: 'https://github.com/thejegan/MLProjects' }
   },
   {
     id: 'fraud-detection',
