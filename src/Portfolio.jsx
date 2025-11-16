@@ -1,4 +1,4 @@
-// src/Portfolio.jsx - Modern, Responsive, Optimized (Completed)
+// src/Portfolio.jsx - Modern, Responsive, Optimized (Complete)
 import React, { useEffect, useState, Suspense } from 'react';
 import projects from './data/projects';
 import { useScrollAnimation } from './hooks/useScrollAnimation';
@@ -38,6 +38,7 @@ export default function Portfolio() {
     <div className="min-h-screen text-white antialiased bg-[color:var(--bg)]">
       <Suspense fallback={null}>
         {mounted && showPlasma && (
+          // show on mobile too, but keep non-interactive
           <div className="block pointer-events-none select-none">
             <Plasma opacity={0.6} speed={0.5} />
           </div>
@@ -62,17 +63,84 @@ export default function Portfolio() {
   );
 }
 
+/* -------------------------
+   TopBar (hide-on-scroll on mobile)
+   ------------------------- */
 function TopBar({ showPlasma, setShowPlasma, isScrolled }) {
   const [menuOpen, setMenuOpen] = useState(false);
+  const [hidden, setHidden] = useState(false);
+  const lastYRef = React.useRef(typeof window !== 'undefined' ? window.scrollY : 0);
+  const tickingRef = React.useRef(false);
+
+  // Helper: only apply hide-on-scroll on small screens (mobile)
+  const isMobile = () => {
+    if (typeof window === 'undefined') return false;
+    return window.innerWidth < 1024; // matches lg breakpoint
+  };
+
+  useEffect(() => {
+    function onScroll() {
+      if (!isMobile()) {
+        // Ensure nav visible on larger screens
+        if (hidden) setHidden(false);
+        return;
+      }
+
+      if (tickingRef.current) return;
+      tickingRef.current = true;
+
+      requestAnimationFrame(() => {
+        const currentY = window.scrollY;
+        const lastY = lastYRef.current;
+        const delta = currentY - lastY;
+
+        // Small threshold to prevent flicker
+        if (Math.abs(delta) > 8) {
+          // Scrolling down -> hide (but only after some minimal offset)
+          if (delta > 0 && currentY > 60) {
+            setHidden(true);
+            // auto-close menu if open so it doesn't stick
+            setMenuOpen(false);
+          } else if (delta < 0) {
+            // Scrolling up -> show
+            setHidden(false);
+          }
+        }
+
+        lastYRef.current = currentY;
+        tickingRef.current = false;
+      });
+    }
+
+    window.addEventListener('scroll', onScroll, { passive: true });
+
+    // Also listen for resize to re-evaluate isMobile -> ensure nav visible after resize to desktop
+    const onResize = () => {
+      if (!isMobile() && hidden) setHidden(false);
+    };
+    window.addEventListener('resize', onResize);
+
+    return () => {
+      window.removeEventListener('scroll', onScroll);
+      window.removeEventListener('resize', onResize);
+    };
+  }, [hidden]);
+
+  // If menu opens, ensure nav is visible so user can interact with it
+  useEffect(() => {
+    if (menuOpen && hidden) setHidden(false);
+  }, [menuOpen, hidden]);
 
   return (
-    <nav className={`fixed top-0 left-0 right-0 z-50 transition-all duration-300 ${
-      isScrolled ? 'py-3 bg-slate-900/80 backdrop-blur-xl shadow-2xl' : 'py-4 bg-transparent'
-    }`}>
+    <nav
+      // transform off-screen when hidden. Keep bg so no flash.
+      className={`fixed top-0 left-0 right-0 z-50 transition-transform duration-300 bg-black/95 backdrop-blur-md py-3 shadow-xl`}
+      style={{ transform: hidden ? 'translateY(-110%)' : 'translateY(0)' }}
+    >
       <div className="container-max">
         <div className="flex items-center justify-between">
           <a href="#" className="flex items-center gap-3 group">
-            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center text-white font-bold text-lg shadow-lg group-hover:shadow-indigo-500/50 transition-all duration-300 group-hover:scale-110">
+            <div className="w-11 h-11 rounded-xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center text-white font-bold text-lg shadow-lg transition-all duration-300">
               J
             </div>
             <div className="hidden sm:block">
@@ -86,7 +154,7 @@ function TopBar({ showPlasma, setShowPlasma, isScrolled }) {
             <a href="#skills" className="nav-link">Skills</a>
             <a href="#projects" className="nav-link">Projects</a>
             <a href="#contact" className="nav-link">Contact</a>
-            
+
             <label className="hidden xl:flex items-center gap-2 text-sm cursor-pointer">
               <input
                 type="checkbox"
@@ -105,8 +173,8 @@ function TopBar({ showPlasma, setShowPlasma, isScrolled }) {
             <a href="#contact" className="btn-primary">Let's Talk</a>
           </div>
 
-          <button 
-            onClick={() => setMenuOpen(!menuOpen)}
+          <button
+            onClick={() => setMenuOpen((s) => !s)}
             className="lg:hidden w-10 h-10 flex items-center justify-center rounded-lg bg-slate-800/50 backdrop-blur-sm"
             aria-label="Open menu"
             aria-expanded={menuOpen}
@@ -137,6 +205,9 @@ function TopBar({ showPlasma, setShowPlasma, isScrolled }) {
   );
 }
 
+/* -------------------------
+   Hero
+   ------------------------- */
 function Hero() {
   return (
     <section id="hero" className="min-h-[90vh] lg:min-h-[75vh] flex items-center pt-20 lg:pt-12">
@@ -186,7 +257,6 @@ function Hero() {
               </a>
             </div>
           </div>
-
         </div>
 
         <div className="hidden lg:flex items-center justify-center animate-fade-in-up animation-delay-200">
@@ -226,6 +296,9 @@ function Hero() {
   );
 }
 
+/* -------------------------
+   About
+   ------------------------- */
 function About() {
   return (
     <section id="about" className="scroll-mt-20 animate-on-scroll">
@@ -235,12 +308,12 @@ function About() {
             <h2 className="text-4xl sm:text-5xl font-bold mb-2">About Me</h2>
             <div className="h-1 w-20 bg-gradient-to-r from-indigo-500 to-purple-500 rounded-full"></div>
           </div>
-          
+
           <p className="text-lg text-slate-300 leading-relaxed">
-            I'm a passionate developer who bridges design, performance, and practical machine learning. 
+            I'm a passionate developer who bridges design, performance, and practical machine learning.
             My focus is on creating experiences that users love and systems that developers can maintain.
           </p>
-          
+
           <div className="grid grid-cols-2 gap-4 pt-4">
             <div className="stat-card">
               <div className="text-3xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">5+</div>
@@ -289,6 +362,9 @@ function About() {
   );
 }
 
+/* -------------------------
+   Skills
+   ------------------------- */
 function Skills() {
   const skillCategories = [
     {
@@ -326,17 +402,18 @@ function Skills() {
 
       <div className="grid sm:grid-cols-2 lg:grid-cols-4 gap-6">
         {skillCategories.map((category, idx) => (
-          <div 
-            key={category.title} 
+          <div
+            key={category.title}
             className="skill-card group"
-            style={{animationDelay: `${idx * 100}ms`}}
+            style={{ animationDelay: `${idx * 100}ms` }}
           >
             <div className={`w-14 h-14 rounded-2xl bg-gradient-to-br ${category.color} flex items-center justify-center text-2xl mb-4 group-hover:scale-110 transition-transform shadow-lg`}>
               {category.icon}
             </div>
             <h3 className="text-xl font-semibold mb-4">{category.title}</h3>
-            <div className="space-y-2">
+            <div className="flex flex-wrap gap-2">
               {category.skills.map((skill) => (
+                // chips on mobile, block-ish on sm+
                 <span key={skill} className="skill-tag inline-flex items-center px-3 py-1 rounded-full text-sm bg-slate-800/40 sm:block">
                   {skill}
                 </span>
@@ -349,6 +426,9 @@ function Skills() {
   );
 }
 
+/* -------------------------
+   ProjectsList
+   ------------------------- */
 function ProjectsList({ projects = [], visible = {} }) {
   return (
     <section id="projects" className="scroll-mt-20 animate-on-scroll">
@@ -363,7 +443,7 @@ function ProjectsList({ projects = [], visible = {} }) {
             key={project.id}
             id={`proj-${project.id}`}
             className="project-card group"
-            style={{animationDelay: `${idx * 100}ms`}}
+            style={{ animationDelay: `${idx * 100}ms` }}
           >
             <div className="grid lg:grid-cols-3 gap-6">
               <div className="lg:col-span-1">
@@ -383,7 +463,7 @@ function ProjectsList({ projects = [], visible = {} }) {
                       {project.title}
                     </h3>
                   </div>
-                  
+
                   <p className="text-slate-300 mb-3">{project.short}</p>
                   <p className="text-slate-400 text-sm leading-relaxed mb-4">{project.description}</p>
 
@@ -420,6 +500,9 @@ function ProjectsList({ projects = [], visible = {} }) {
   );
 }
 
+/* -------------------------
+   Contact
+   ------------------------- */
 function Contact() {
   const [form, setForm] = useState({ name: '', email: '', message: '' });
   const [status, setStatus] = useState({ sending: false, success: null, error: null });
@@ -440,8 +523,7 @@ function Contact() {
     }
 
     try {
-      // Replace this with your real API endpoint or service (Formspree, Netlify Forms, Supabase, etc.)
-      // Here we simulate a quick success response.
+      // Replace this with your real API endpoint or service
       await new Promise((r) => setTimeout(r, 700));
       setForm({ name: '', email: '', message: '' });
       setStatus({ sending: false, success: 'Message sent — thanks!', error: null });
@@ -475,7 +557,7 @@ function Contact() {
           </div>
 
           <div className="md:col-span-2 flex items-center justify-between gap-4">
-            <div className="text-sm text-slate-400">Prefer email? hello@thejegan.dev</div>
+            <div className="text-sm text-slate-400">Prefer email? thejegan31@gmail.com</div>
             <div className="flex items-center gap-3">
               <button type="submit" disabled={status.sending} className="btn-primary">
                 {status.sending ? 'Sending...' : 'Send Message'}
@@ -492,6 +574,9 @@ function Contact() {
   );
 }
 
+/* -------------------------
+   Footer
+   ------------------------- */
 function Footer() {
   return (
     <footer className="py-12 text-center text-slate-400">
@@ -509,7 +594,7 @@ function Footer() {
         <div className="flex items-center justify-center gap-4 mb-4">
           <a href="https://github.com/thejegan" className="social-icon" aria-label="GitHub">GitHub</a>
           <a href="https://linkedin.com/in/thejegan" className="social-icon" aria-label="LinkedIn">LinkedIn</a>
-          <a href="mailto:hello@thejegan.dev" className="social-icon" aria-label="Email">Email</a>
+          <a href="mailto:thejegan31@gmail.com" className="social-icon" aria-label="Email">Email</a>
         </div>
 
         <div className="text-xs">© {new Date().getFullYear()} Jegan — Built with React & Tailwind</div>
@@ -517,5 +602,4 @@ function Footer() {
     </footer>
   );
 }
-
 // End of file
