@@ -10,11 +10,11 @@
 /* Color variables for easy theme tweaks */
 :root {
   --bg: #000000;     /* solid black base so plasma shows clearly */
-  --panel: #0b1220;
+  --panel: #000000;
   --muted: #94a3b8;
   --accent: #5b8def;
   --accent-600: #3a6fe8;
-  --card: #0b1320;
+  --card: #000000;
   --text: #e6eef8;
 }
 
