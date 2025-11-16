@@ -1,6 +1,6 @@
 /* src/index.css
    Tailwind + small global styles for the portfolio.
-   Cleaned: removed opaque gradients so plasma is clearly visible.
+   Merged + fix: override Tailwind gradient-position variables to remove milky tint.
 */
 
 @tailwind base;
@@ -9,12 +9,12 @@
 
 /* Color variables for easy theme tweaks */
 :root {
-  --bg: #000000;     /* solid black base so plasma shows clearly */
-  --panel: #000000;
+  --bg: #0f1724;
+  --panel: #0b1220;
   --muted: #94a3b8;
   --accent: #5b8def;
   --accent-600: #3a6fe8;
-  --card: #000000;
+  --card: #0b1320;
   --text: #e6eef8;
 }
 
@@ -27,10 +27,10 @@ html, body {
   overflow-x: hidden;
 }
 
-/* Keep root height preserved and use solid black background (no gradient fog) */
+/* Keep root height preserved; keep a dark root, but page hero uses bg-gradient classes */
 html, body, #root {
   height: 100%;
-  background: var(--bg); /* solid black - lets plasma shine */
+  background: var(--bg);
   color: var(--text);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -99,6 +99,41 @@ img, picture, video, iframe {
   pointer-events: none;
   background: transparent !important;
   backdrop-filter: none !important;
+}
+
+/* Force container to be visually transparent (safety) */
+.container-max,
+.container-max::before,
+.container-max::after {
+  background: transparent !important;
+  background-image: none !important;
+  backdrop-filter: none !important;
+  -webkit-backdrop-filter: none !important;
+  box-shadow: none !important;
+  border: none !important;
+}
+
+/* Also ensure immediate children don't inject large backgrounds */
+.container-max > * {
+  background: transparent !important;
+  background-image: none !important;
+  box-shadow: none !important;
+}
+
+/* --------------------------
+   Tailwind gradient position fix
+   --------------------------
+   Tailwind sometimes writes vars like --tw-gradient-from-position which
+   can cause unexpected gradient compositions. Override them to sane defaults
+   so the gradient classes still work but don't create a milky blend over the plasma.
+*/
+.bg-gradient-to-b,
+.bg-gradient-to-b[class*="from-"],
+.bg-gradient-to-b[class*="via-"],
+.bg-gradient-to-b[class*="to-"] {
+  --tw-gradient-from-position: 50% 0% !important;
+  --tw-gradient-to-position: 50% 100% !important;
+  --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to, rgba(255,255,255,0));
 }
 
 /* Utility: ensure content sits above plasma */
