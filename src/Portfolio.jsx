@@ -30,8 +30,8 @@ export default function Portfolio() {
 
   return (
     <div className="min-h-screen bg-gradient-to-b from-gray-900 via-slate-900 to-black text-[var(--text)] antialiased">
-      {/* Plasma background (lazy + gated) */}
-      <Suspense fallback={<div aria-hidden className="plasma-fallback pointer-events-none" />}>
+      {/* Plasma background (lazy + gated). Fallback is null so nothing creates a visible wash */}
+      <Suspense fallback={null}>
         {mounted && showPlasma && <Plasma opacity={0.7} speed={0.6} />}
       </Suspense>
 

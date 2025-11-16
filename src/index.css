@@ -1,6 +1,6 @@
 /* src/index.css
    Tailwind + small global styles for the portfolio.
-   Defensive layout fixes added to prevent horizontal scrolling.
+   Cleaned: removed opaque gradients so plasma is clearly visible.
 */
 
 @tailwind base;
@@ -9,7 +9,7 @@
 
 /* Color variables for easy theme tweaks */
 :root {
-  --bg: #0f1724;
+  --bg: #000000;     /* solid black base so plasma shows clearly */
   --panel: #0b1220;
   --muted: #94a3b8;
   --accent: #5b8def;
@@ -24,13 +24,13 @@
 
 /* Prevent horizontal overflow globally */
 html, body {
-  overflow-x: hidden; /* hide horizontal overflow */
+  overflow-x: hidden;
 }
 
-/* Keep root height preserved */
+/* Keep root height preserved and use solid black background (no gradient fog) */
 html, body, #root {
   height: 100%;
-  background: linear-gradient(180deg, var(--bg) 0%, #07090f 100%);
+  background: var(--bg); /* solid black - lets plasma shine */
   color: var(--text);
   -webkit-font-smoothing: antialiased;
   -moz-osx-font-smoothing: grayscale;
@@ -51,7 +51,7 @@ img, picture, video, iframe {
 
 /* Full-bleed sections without overflow */
 .full-bleed, .section-bleed {
-  width: 100%; 
+  width: 100%;
   margin-left: 0;
   margin-right: 0;
 }
@@ -72,10 +72,12 @@ img, picture, video, iframe {
   overflow-x: hidden !important;
 }
 
-/* Plasma / Canvas background safety */
+/* ---------------------------------------------------
+   Plasma / Canvas background safety & stacking rules
+   Keep plasma at z-index 0 and page content above it
+   --------------------------------------------------- */
 .plasma-container,
-.plasma-fallback,
-canvas {
+.plasma-container canvas {
   position: fixed;
   inset: 0;
   width: 100%;
@@ -83,22 +85,33 @@ canvas {
   max-height: 100vh;
   pointer-events: none;
   touch-action: none;
-  z-index: -1;
+  z-index: 0; /* plasma sits behind main content (which uses z-index:10) */
   transform: translateZ(0);
+  will-change: transform, opacity;
+  contain: paint;
 }
 
-/* Plasma fallback decorative layer */
+/* Remove any visible fallback wash */
 .plasma-fallback {
-  background: radial-gradient(ellipse at center, rgba(88, 102, 255, 0.06) 0%, rgba(10, 12, 18, 0.0) 40%);
-  backdrop-filter: blur(0px);
-}
-
-/* Small utility to ensure decorative background doesn't interfere */
-[aria-hidden="true"] {
+  position: fixed;
+  inset: 0;
+  z-index: 0;
   pointer-events: none;
+  background: transparent !important;
+  backdrop-filter: none !important;
 }
 
-/* Form elements */
+/* Utility: ensure content sits above plasma */
+.main-content,
+.container-max,
+header,
+main,
+footer {
+  position: relative;
+  z-index: 10;
+}
+
+/* form elements inherit */
 input, textarea, select, button {
   font-family: inherit;
 }
