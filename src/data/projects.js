@@ -11,7 +11,7 @@ const projects = [
     role: 'Mobile lead — auth, profile, UI logic, integrations',
     image: '/images/projects/plaro.svg',
     imageSmall: '/images/projects/plaro@400w.png',
-    links: { live: '#', github: '#' }
+    links: { live: '', github: 'https://github.com/plaroindia/Project-Plaro' }
   },
   {
     id: 'solar-system',
