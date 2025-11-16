@@ -1,19 +1,18 @@
-// src/Portfolio.jsx
+// src/Portfolio.jsx - FIXED VERSION (removed gradient overlay)
 import React, { useEffect, useState, Suspense } from 'react';
 import projects from './data/projects';
 import { useScrollAnimation } from './hooks/useScrollAnimation';
-import './index.css'; // Tailwind + custom CSS
+import './index.css';
 
 const Plasma = React.lazy(() => import('./components/Plasma'));
 
 export default function Portfolio() {
   const [mounted, setMounted] = useState(false);
-  const [showPlasma, setShowPlasma] = useState(true); // user preference toggle
+  const [showPlasma, setShowPlasma] = useState(true);
   const visible = useScrollAnimation();
 
   useEffect(() => {
     setMounted(true);
-    // Respect user preference for reduced motion and saved preference in localStorage
     try {
       const saved = localStorage.getItem('pref_plasma');
       if (saved !== null) {
@@ -29,8 +28,8 @@ export default function Portfolio() {
   }, []);
 
   return (
-    <div className="min-h-screen bg-gradient-to-b from-gray-900 via-slate-900 to-black text-[var(--text)] antialiased">
-      {/* Plasma background (lazy + gated). Fallback is null so nothing creates a visible wash */}
+    <div className="min-h-screen text-[var(--text)] antialiased">
+      {/* Plasma background */}
       <Suspense fallback={null}>
         {mounted && showPlasma && <Plasma opacity={0.7} speed={0.6} />}
       </Suspense>
@@ -39,7 +38,7 @@ export default function Portfolio() {
       <TopBar showPlasma={showPlasma} setShowPlasma={setShowPlasma} />
 
       {/* Page container */}
-      <div className="relative z-10 container-max py-24"> {/* increased top padding for topbar */}
+      <div className="relative z-10 container-max py-24">
         <Header />
 
         <main className="space-y-20">
@@ -56,13 +55,10 @@ export default function Portfolio() {
   );
 }
 
-/* ---------------------------
-   TopBar (sticky, stylish)
-   --------------------------- */
+/* TopBar */
 function TopBar({ showPlasma, setShowPlasma }) {
   return (
     <div className="fixed top-4 left-1/2 transform -translate-x-1/2 z-50 w-[min(980px,92%)] bg-slate-900/60 backdrop-blur-md border border-slate-800 rounded-full px-4 py-2 flex items-center justify-between gap-3 shadow-lg animate-pop">
-      {/* Left: availability */}
       <div className="flex items-center gap-3">
         <span className="inline-flex items-center gap-2 px-4 py-1 rounded-full bg-slate-800/70 border border-slate-700 text-slate-100 text-sm">
           <span className="w-2 h-2 rounded-full bg-green-400 animate-pulse-slow"></span>
@@ -70,32 +66,12 @@ function TopBar({ showPlasma, setShowPlasma }) {
         </span>
       </div>
 
-      {/* Center: actions */}
       <div className="flex items-center gap-3">
-        <a
-          href="#contact"
-          className="btn-action"
-        >
-          Get in touch →
-        </a>
-
-        <a
-          href="#projects"
-          className="btn-action btn-muted"
-        >
-          View projects →
-        </a>
-
-        <a
-          href="./data/cv.pdf"
-          download
-          className="btn-action btn-muted"
-        >
-          Download CV ⬇
-        </a>
+        <a href="#contact" className="btn-action">Get in touch →</a>
+        <a href="#projects" className="btn-action btn-muted">View projects →</a>
+        <a href="./data/cv.pdf" download className="btn-action btn-muted">Download CV ⬇</a>
       </div>
 
-      {/* Right: socials & plasma toggle */}
       <div className="flex items-center gap-3">
         <a className="round-icon" href="https://linkedin.com/thejegan" aria-label="LinkedIn">in</a>
         <a className="round-icon" href="https://github.com/thejegan" aria-label="GitHub">GH</a>
@@ -117,9 +93,7 @@ function TopBar({ showPlasma, setShowPlasma }) {
   );
 }
 
-/* ---------------------------
-   Main header (kept simple under topbar)
-   --------------------------- */
+/* Header */
 function Header() {
   return (
     <header className="flex items-center justify-between py-2">
@@ -138,10 +112,6 @@ function Header() {
     </header>
   );
 }
-
-/* ---------------------------
-   Other sections (unchanged, small animation classes added)
-   --------------------------- */
 
 function Hero() {
   return (
@@ -179,8 +149,8 @@ function About() {
     <section id="about" className="pt-6 animate-fade-up delay-100">
       <h2 className="text-2xl font-semibold text-slate-100">About</h2>
       <p className="mt-3 text-slate-200 max-w-3xl">
-        I’m Jegan — a developer who enjoys bridging the gap between design, frontend performance and practical ML.
-        I’ve worked on cross-platform mobile apps (Flutter + Supabase), production-ready React frontends with custom WebGL experiences,
+        I'm Jegan — a developer who enjoys bridging the gap between design, frontend performance and practical ML.
+        I've worked on cross-platform mobile apps (Flutter + Supabase), production-ready React frontends with custom WebGL experiences,
         and lightweight ML models for mobile/edge deployment.
       </p>
 
@@ -275,16 +245,12 @@ function ProjectsList({ projects = [], visible = {} }) {
   );
 }
 
-/* ---------------------------
-   Updated Contact component (single-column, modern)
-   --------------------------- */
 function Contact() {
   return (
     <section id="contact" className="pt-6 animate-fade-up delay-200">
       <h2 className="text-2xl font-semibold text-slate-100 mb-6">Contact</h2>
 
       <div className="bg-slate-800 p-6 rounded-lg border border-slate-700 shadow-lg">
-        {/* Contact Form */}
         <form className="space-y-4" onSubmit={(e) => e.preventDefault()}>
           <div>
             <label className="text-sm text-slate-200">Name</label>
@@ -318,31 +284,17 @@ function Contact() {
           </div>
         </form>
 
-        {/* Buttons like your sample image */}
         <div className="flex flex-wrap items-center gap-3 mt-8">
-          <a
-            href="#contact"
-            className="flex items-center gap-2 bg-black/40 hover:bg-black/60 border border-slate-700 text-slate-100 px-5 py-2 rounded-full text-sm transition"
-          >
+          <a href="#contact" className="flex items-center gap-2 bg-black/40 hover:bg-black/60 border border-slate-700 text-slate-100 px-5 py-2 rounded-full text-sm transition">
             Get in touch →
           </a>
-
-          <a
-            href="#projects"
-            className="flex items-center gap-2 bg-white/10 hover:bg-white/20 border border-slate-600 text-slate-200 px-5 py-2 rounded-full text-sm transition"
-          >
+          <a href="#projects" className="flex items-center gap-2 bg-white/10 hover:bg-white/20 border border-slate-600 text-slate-200 px-5 py-2 rounded-full text-sm transition">
             View projects →
           </a>
-
-          <a
-            href="./data/cv.pdf"
-            download
-            className="flex items-center gap-2 bg-white/10 hover:bg-white/20 border border-slate-600 text-slate-200 px-5 py-2 rounded-full text-sm transition"
-          >
+          <a href="./data/cv.pdf" download className="flex items-center gap-2 bg-white/10 hover:bg-white/20 border border-slate-600 text-slate-200 px-5 py-2 rounded-full text-sm transition">
             Download CV ⬇
           </a>
 
-          {/* Socials */}
           <a href="https://linkedin.com/thejegan" className="w-10 h-10 rounded-full border border-slate-700 flex items-center justify-center hover:bg-white/10 transition text-slate-200" aria-label="LinkedIn">in</a>
           <a href="https://github.com/thejegan" className="w-10 h-10 rounded-full border border-slate-700 flex items-center justify-center hover:bg-white/10 transition text-slate-200" aria-label="GitHub">GH</a>
           <a href="https://instagram.com/thejegan_" className="w-10 h-10 rounded-full border border-slate-700 flex items-center justify-center hover:bg-white/10 transition text-slate-200" aria-label="Instagram">IG</a>
